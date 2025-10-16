@@ -1,3 +1,4 @@
+import "server-only";
 import crypto from "node:crypto";
 
 import { cookies } from "next/headers";
