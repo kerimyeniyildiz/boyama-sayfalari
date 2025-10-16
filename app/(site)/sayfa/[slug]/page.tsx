@@ -1,11 +1,8 @@
 import { notFound } from "next/navigation";
-import { unstable_after } from "next/server";
-
 import {
   getColoringPageBySlug,
   getRelatedPages,
   getAllPublishedSlugs,
-  incrementViews
 } from "@/lib/data/coloring-pages";
 import { getPublicUrl } from "@/lib/r2";
 import {
@@ -64,10 +61,6 @@ export default async function ColoringPageRoute({ params }: PageProps) {
   if (!page || page.status !== "PUBLISHED") {
     notFound();
   }
-
-  unstable_after(async () => {
-    await incrementViews(page.id);
-  });
 
   const related = await getRelatedPages(
     page.slug,

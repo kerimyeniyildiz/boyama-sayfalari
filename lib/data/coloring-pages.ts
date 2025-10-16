@@ -241,13 +241,3 @@ export async function incrementDownloads(pageId: string) {
     select: { downloads: true }
   });
 }
-
-export async function incrementViews(pageId: string) {
-  return prisma.coloringPage.update({
-    where: { id: pageId },
-    data: {
-      views: { increment: 1 }
-    },
-    select: { views: true }
-  });
-}
