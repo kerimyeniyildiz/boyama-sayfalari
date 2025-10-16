@@ -70,7 +70,8 @@ export async function getRelatedPages(
       ]
     },
     include: {
-      categories: { include: { category: true } }
+      categories: { include: { category: true } },
+      tags: { include: { tag: true } }
     },
     take: limit,
     orderBy: [
