@@ -1,0 +1,116 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model ColoringPage {
+  id             String      @id @default(cuid())
+  slug           String      @unique
+  title          String
+  description    String
+  difficulty     Difficulty
+  orientation    Orientation
+  ageMin         Int?
+  ageMax         Int?
+  artist         String?
+  license        String?
+  sourceUrl      String?
+  status         PageStatus  @default(DRAFT)
+  language       String      @default("tr")
+  pdfKey         String
+  coverImageKey  String
+  thumbWebpKey   String
+  width          Int?
+  height         Int?
+  fileSizeBytes  Int?
+  views          Int         @default(0)
+  downloads      Int         @default(0)
+  searchVector   Unsupported("tsvector")?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  categories     ColoringPageCategory[]
+  tags           ColoringPageTag[]
+  downloadEvents DownloadEvent[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([searchVector], type: Gin)
+}
+
+model Category {
+  id        String                 @id @default(cuid())
+  name      String
+  slug      String                 @unique
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+
+  pages     ColoringPageCategory[]
+}
+
+model Tag {
+  id        String              @id @default(cuid())
+  name      String
+  slug      String              @unique
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  pages     ColoringPageTag[]
+}
+
+model ColoringPageCategory {
+  page       ColoringPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  pageId     String
+  category   Category     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId String
+
+  @@id([pageId, categoryId])
+}
+
+model ColoringPageTag {
+  page   ColoringPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  pageId String
+  tag    Tag          @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  tagId  String
+
+  @@id([pageId, tagId])
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model DownloadEvent {
+  id        String    @id @default(cuid())
+  page      ColoringPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  pageId    String
+  ipHash    String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([pageId, createdAt])
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum Orientation {
+  PORTRAIT
+  LANDSCAPE
+}
+
+enum PageStatus {
+  DRAFT
+  PUBLISHED
+}

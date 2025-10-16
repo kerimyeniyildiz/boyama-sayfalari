@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-brand-light text-brand-dark antialiased min-h-screen;
+}
+
+a {
+  @apply text-brand-dark underline-offset-4 transition-colors;
+}
+
+a:hover {
+  @apply text-brand;
+}
+
+.container {
+  @apply mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8;
+}
