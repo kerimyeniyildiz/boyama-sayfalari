@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { getSessionFromRequest } from "@/lib/auth";
+import { getSessionFromRequest } from "@/lib/auth-edge";
 
 const PUBLIC_ROUTES = ["/admin/login", "/api/admin/login"];
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (PUBLIC_ROUTES.includes(pathname)) {
-    const session = getSessionFromRequest(request);
+    const session = await getSessionFromRequest(request);
     if (session && pathname === "/admin/login") {
       return NextResponse.redirect(new URL("/admin", request.url));
     }
@@ -17,7 +17,7 @@ export function middleware(request: NextRequest) {
   }
 
   if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {
-    const session = getSessionFromRequest(request);
+    const session = await getSessionFromRequest(request);
     if (!session) {
       if (pathname.startsWith("/api/admin")) {
         return NextResponse.json({ error: "Yetkisiz erişim" }, { status: 401 });
