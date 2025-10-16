@@ -13,7 +13,7 @@ import { CategorySection } from "@/components/sections/category-section";
 import { LatestSection } from "@/components/sections/latest-section";
 import { TagCloud } from "@/components/sections/tag-cloud";
 
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata() {
   return buildMetadata({

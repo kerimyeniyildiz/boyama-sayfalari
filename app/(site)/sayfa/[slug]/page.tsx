@@ -1,24 +1,15 @@
 import { notFound } from "next/navigation";
+
 import {
   getColoringPageBySlug,
-  getRelatedPages,
-  getAllPublishedSlugs,
+  getRelatedPages
 } from "@/lib/data/coloring-pages";
 import { getPublicUrl } from "@/lib/r2";
-import {
-  buildCreativeWorkJsonLd,
-  buildMetadata,
-  siteConfig
-} from "@/lib/seo";
+import { buildCreativeWorkJsonLd, buildMetadata, siteConfig } from "@/lib/seo";
 import { JsonLd } from "@/components/seo/json-ld";
 import { ColoringPageDetail } from "@/components/sections/coloring-page-detail";
 
-export const revalidate = 900;
-
-export async function generateStaticParams() {
-  const slugs = await getAllPublishedSlugs();
-  return slugs.map((slug) => ({ slug }));
-}
+export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: {

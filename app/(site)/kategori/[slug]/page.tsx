@@ -1,24 +1,12 @@
 import { notFound } from "next/navigation";
 
-import {
-  getAllCategorySlugs,
-  getCategoryWithPages
-} from "@/lib/data/coloring-pages";
-import {
-  buildCollectionJsonLd,
-  buildMetadata,
-  siteConfig
-} from "@/lib/seo";
+import { getCategoryWithPages } from "@/lib/data/coloring-pages";
+import { buildCollectionJsonLd, buildMetadata, siteConfig } from "@/lib/seo";
 import { getPublicUrl } from "@/lib/r2";
 import { JsonLd } from "@/components/seo/json-ld";
 import { CategoryCollection } from "@/components/sections/category-collection";
 
-export const revalidate = 1800;
-
-export async function generateStaticParams() {
-  const slugs = await getAllCategorySlugs();
-  return slugs.map((slug) => ({ slug }));
-}
+export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: {
