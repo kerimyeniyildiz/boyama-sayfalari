@@ -1,6 +1,8 @@
 import { buildMetadata, siteConfig } from "@/lib/seo";
 import { AdminLoginForm } from "@/components/admin/admin-login-form";
 
+export const dynamic = "force-dynamic";
+
 type PageProps = {
   searchParams: {
     redirectTo?: string;

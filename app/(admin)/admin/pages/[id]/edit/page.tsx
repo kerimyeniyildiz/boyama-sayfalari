@@ -7,6 +7,8 @@ import {
 } from "@/lib/data/coloring-pages";
 import { AdminPageForm } from "@/components/admin/admin-page-form";
 
+export const dynamic = "force-dynamic";
+
 type PageProps = {
   params: {
     id: string;
@@ -24,7 +26,5 @@ export default async function EditPage({ params }: PageProps) {
     notFound();
   }
 
-  return (
-    <AdminPageForm page={page} categories={categories} tags={tags} />
-  );
+  return <AdminPageForm page={page} categories={categories} tags={tags} />;
 }
