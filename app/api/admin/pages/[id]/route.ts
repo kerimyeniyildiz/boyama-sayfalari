@@ -44,6 +44,18 @@ export async function PUT(
     ? slugify(rawSlug)
     : existingPage.slug;
 
+  const submittedCategories = formData
+    .getAll("categories")
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+
+  const submittedTags = formData
+    .getAll("tags")
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+
   const metadataInput = {
     title,
     slug: computedSlug,
@@ -64,20 +76,12 @@ export async function PUT(
       existingPage.status,
     language: toString(formData.get("language")) || existingPage.language,
     categories:
-      formData
-        .getAll("categories")
-        .filter((value): value is string => typeof value === "string" && value).length > 0
-        ? formData
-            .getAll("categories")
-            .filter((value): value is string => typeof value === "string" && value)
+      submittedCategories.length > 0
+        ? submittedCategories
         : existingPage.categories.map((item) => item.category.slug),
     tags:
-      formData
-        .getAll("tags")
-        .filter((value): value is string => typeof value === "string" && value).length > 0
-        ? formData
-            .getAll("tags")
-            .filter((value): value is string => typeof value === "string" && value)
+      submittedTags.length > 0
+        ? submittedTags
         : existingPage.tags.map((item) => item.tag.slug),
     width: toString(formData.get("width")),
     height: toString(formData.get("height")),

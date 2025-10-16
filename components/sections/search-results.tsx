@@ -1,4 +1,5 @@
-import Link from "next/link";
+﻿import Link from "next/link";
+import type { Route } from "next";
 import { notFound } from "next/navigation";
 import type {
   ColoringPage,
@@ -63,16 +64,17 @@ type SearchResultsProps = {
   tags: Tag[];
 };
 
-function buildQuery(params: Record<string, string | number | undefined>) {
-  const url = new URLSearchParams();
+function buildQueryParams(params: Record<string, string | number | undefined>) {
+  const query: Record<string, string> = {};
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== "") {
-      url.set(key, String(value));
+      query[key] = String(value);
     }
   });
-  const queryString = url.toString();
-  return queryString ? `?${queryString}` : "";
+  return query;
 }
+
+const searchRoute = "/ara" as Route;
 
 export function SearchResults({
   filters,
@@ -89,7 +91,7 @@ export function SearchResults({
   return (
     <section className="container space-y-10 py-12">
       <div className="rounded-3xl border border-brand-dark/10 bg-white/90 p-6 shadow-card">
-        <form className="grid gap-6" action="/ara" method="get">
+        <form className="grid gap-6" action={searchRoute} method="get">
           <div className="grid gap-4 md:grid-cols-[1.5fr_1fr_1fr_1fr_1fr]">
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-brand-dark/80">
@@ -159,7 +161,7 @@ export function SearchResults({
           <div className="flex flex-wrap items-center gap-3">
             <Button type="submit">Filtrele</Button>
             <Button type="reset" variant="ghost" asChild>
-              <Link href="/ara">Filtreleri sıfırla</Link>
+              <Link href={searchRoute}>Filtreleri sıfırla</Link>
             </Button>
             <input type="hidden" name="sayfa" value="1" />
           </div>
@@ -201,10 +203,13 @@ export function SearchResults({
             >
               <Link
                 aria-disabled={result.page <= 1}
-                href={buildQuery({
-                  ...filters,
-                  sayfa: result.page - 1 <= 0 ? 1 : result.page - 1
-                })}
+                href={{
+                  pathname: searchRoute,
+                  query: buildQueryParams({
+                    ...filters,
+                    sayfa: result.page - 1 <= 0 ? 1 : result.page - 1
+                  })
+                }}
               >
                 Önceki
               </Link>
@@ -217,10 +222,13 @@ export function SearchResults({
             >
               <Link
                 aria-disabled={result.page >= totalPages}
-                href={buildQuery({
-                  ...filters,
-                  sayfa: result.page + 1
-                })}
+                href={{
+                  pathname: searchRoute,
+                  query: buildQueryParams({
+                    ...filters,
+                    sayfa: result.page + 1
+                  })
+                }}
               >
                 Sonraki
               </Link>

@@ -1,13 +1,25 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FilePlus, LayoutDashboard, LogOut } from "lucide-react";
+import type { Route } from "next";
+import {
+  FilePlus,
+  LayoutDashboard,
+  LogOut,
+  type LucideIcon
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
-const items = [
-  { href: "/admin", label: "Gösterge Paneli", icon: LayoutDashboard },
+type NavItem = {
+  href: Route;
+  label: string;
+  icon: LucideIcon;
+};
+
+const navItems: NavItem[] = [
+  { href: "/admin", label: "Yönetim Paneli", icon: LayoutDashboard },
   { href: "/admin/pages/new", label: "Yeni Sayfa", icon: FilePlus }
 ];
 
@@ -37,12 +49,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
       <div className="container flex flex-col gap-10 py-10 lg:flex-row">
         <nav className="flex w-full flex-row gap-3 overflow-auto rounded-2xl border border-brand-dark/10 bg-white p-3 shadow-card lg:h-fit lg:w-64 lg:flex-col">
-          {items.map((item) => {
+          {navItems.map((item) => {
             const isActive =
               item.href === "/admin"
                 ? pathname === "/admin"
                 : pathname.startsWith(item.href);
+
             const Icon = item.icon;
+
             return (
               <Link
                 key={item.href}

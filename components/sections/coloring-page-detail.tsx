@@ -1,5 +1,6 @@
-import Image from "next/image";
+﻿import Image from "next/image";
 import Link from "next/link";
+import type { Route } from "next";
 import type {
   ColoringPage,
   ColoringPageCategory,
@@ -44,7 +45,7 @@ const orientationMap: Record<string, string> = {
 export function ColoringPageDetail({ page, related }: Props) {
   const imageLarge = getPublicUrl(page.thumbWebpKey);
   const imageSmall = imageLarge.replace("-800.webp", "-400.webp");
-  const pdfUrl = `/api/download/${page.slug}`;
+  const pdfRoute = `/api/download/${page.slug}` as Route;
 
   return (
     <section className="container py-12">
@@ -109,7 +110,7 @@ export function ColoringPageDetail({ page, related }: Props) {
                   {page.categories.map((category) => (
                     <Link
                       key={category.category.id}
-                      href={`/kategori/${category.category.slug}`}
+                      href={`/kategori/${category.category.slug}` as Route}
                       className="rounded-full border border-brand-dark/20 px-3 py-1 text-xs text-brand-dark/70 transition hover:border-brand-dark/40 hover:text-brand-dark"
                     >
                       {category.category.name}
@@ -125,7 +126,7 @@ export function ColoringPageDetail({ page, related }: Props) {
                   {page.tags.map((tag) => (
                     <Link
                       key={tag.tag.id}
-                      href={`/etiket/${tag.tag.slug}`}
+                      href={`/etiket/${tag.tag.slug}` as Route}
                       className="rounded-full bg-brand-light px-3 py-1 text-xs text-brand-dark/70 transition hover:bg-brand"
                     >
                       #{tag.tag.name}
@@ -137,7 +138,7 @@ export function ColoringPageDetail({ page, related }: Props) {
           </div>
           <div className="flex flex-col gap-3">
             <Button asChild size="lg" className="w-full">
-              <Link href={pdfUrl}>
+              <Link href={pdfRoute}>
                 <FileDown className="mr-2 h-5 w-5" />
                 PDF indir
               </Link>

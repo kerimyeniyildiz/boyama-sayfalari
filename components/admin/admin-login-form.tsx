@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import type { Route } from "next";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -47,7 +48,12 @@ export function AdminLoginForm({ redirectTo }: AdminLoginFormProps) {
         return;
       }
 
-      router.push(redirectTo ?? "/admin");
+      const targetRoute: Route =
+        redirectTo && redirectTo.startsWith("/")
+          ? (redirectTo as Route)
+          : "/admin";
+
+      router.push(targetRoute);
       router.refresh();
     });
   });

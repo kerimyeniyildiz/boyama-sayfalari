@@ -1,16 +1,22 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { Route } from "next";
 import { Palette, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const links = [
-  { href: "/", label: "Ana Sayfa" },
-  { href: "/kategori/hayvanlar", label: "Kategori" },
-  { href: "/ara", label: "Ara" }
+type HeaderLink = {
+  href: Route;
+  label: string;
+};
+
+const links: HeaderLink[] = [
+  { href: "/" as Route, label: "Ana Sayfa" },
+  { href: "/kategori/hayvanlar" as Route, label: "Kategori" },
+  { href: "/ara" as Route, label: "Ara" }
 ];
 
 export function SiteHeader() {
@@ -26,7 +32,9 @@ export function SiteHeader() {
           <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-brand">
             <Palette className="h-6 w-6 text-brand-dark" />
           </span>
-          <span className="font-heading">{process.env.NEXT_PUBLIC_SITE_NAME ?? "Boyama Sayfaları"}</span>
+          <span className="font-heading">
+            {process.env.NEXT_PUBLIC_SITE_NAME ?? "Boyama Sayfaları"}
+          </span>
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex">
@@ -53,12 +61,7 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-3">
-          <Button
-            asChild
-            variant="ghost"
-            size="icon"
-            aria-label="Ara"
-          >
+          <Button asChild variant="ghost" size="icon" aria-label="Ara">
             <Link href="/ara">
               <Search className="h-5 w-5" />
             </Link>

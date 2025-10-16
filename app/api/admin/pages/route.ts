@@ -60,6 +60,18 @@ export async function POST(request: Request) {
   const rawSlug = toString(formData.get("slug"));
   const computedSlug = rawSlug ? slugify(rawSlug) : slugify(title);
 
+  const submittedCategories = formData
+    .getAll("categories")
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+
+  const submittedTags = formData
+    .getAll("tags")
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+
   const metadataInput = {
     title,
     slug: computedSlug,
@@ -73,12 +85,8 @@ export async function POST(request: Request) {
     sourceUrl: toOptionalString(formData.get("sourceUrl")),
     status: toString(formData.get("status")).toUpperCase() || "DRAFT",
     language: toString(formData.get("language")) || "tr",
-    categories: formData
-      .getAll("categories")
-      .filter((value): value is string => typeof value === "string" && value),
-    tags: formData
-      .getAll("tags")
-      .filter((value): value is string => typeof value === "string" && value),
+    categories: submittedCategories,
+    tags: submittedTags,
     width: toString(formData.get("width")),
     height: toString(formData.get("height")),
     fileSizeBytes: toString(formData.get("fileSizeBytes"))
