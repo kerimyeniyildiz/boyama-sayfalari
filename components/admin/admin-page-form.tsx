@@ -96,7 +96,7 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
       formData.append("image", imageFile);
     }
 
-    const endpoint = page ? /api/admin/pages/ : "/api/admin/pages";
+    const endpoint = page ? `/api/admin/pages/${page.id}` : "/api/admin/pages";
     const method = page ? "PUT" : "POST";
 
     startTransition(async () => {
@@ -115,7 +115,7 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
           const message =
             typeof data?.error?.message === "string"
               ? data.error.message
-              : "Kaydetme işlemi sırasında bir hata oluştu.";
+              : "Kaydetme iÅŸlemi sÄ±rasÄ±nda bir hata oluÅŸtu.";
           const fieldErrors: Record<string, string[]> | undefined =
             data?.error?.fieldErrors;
 
@@ -136,12 +136,12 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
           return;
         }
 
-        toast.success("Boyama sayfası kaydedildi.");
-        router.push(/sayfa/);
+        toast.success("Boyama sayfasÄ± kaydedildi.");
+        router.push("/admin/pages");
         router.refresh();
       } catch (error) {
-        console.error("Yeni sayfa kaydedilirken bir hata oluştu", error);
-        const message = "Kaydetme işlemi sırasında beklenmedik bir hata oluştu.";
+        console.error("Yeni sayfa kaydedilirken bir hata oluÅŸtu", error);
+        const message = "Kaydetme iÅŸlemi sÄ±rasÄ±nda beklenmedik bir hata oluÅŸtu.";
         setFormError(message);
         toast.error(message);
       }
@@ -161,12 +161,12 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
 
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="title">Başlık</Label>
+          <Label htmlFor="title">BaÅŸlÄ±k</Label>
           <Input
             id="title"
             {...form.register("title")}
             disabled={isPending}
-            placeholder="Örn. Sevimli Orman Arkadaşları"
+            placeholder="Ã–rn. Sevimli Orman ArkadaÅŸlarÄ±"
           />
           {errors.title?.message ? (
             <p className="text-xs text-red-500">{errors.title.message}</p>
@@ -267,7 +267,7 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="image">Görsel</Label>
+        <Label htmlFor="image">GÃ¶rsel</Label>
         <Input
           id="image"
           type="file"
@@ -276,7 +276,7 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
           {...imageRegister}
         />
         <p className="text-xs text-brand-dark/60">
-          Görsel yüklemeden önce dikey boyutta olduğuna emin olun; gerekirse otomatik olarak düzenlenecektir.
+          GÃ¶rsel yÃ¼klemeden Ã¶nce dikey boyutta olduÄŸuna emin olun; gerekirse otomatik olarak dÃ¼zenlenecektir.
         </p>
         {errors.image?.message ? (
           <p className="text-xs text-red-500">{errors.image.message}</p>
@@ -285,7 +285,7 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
 
       <div className="flex items-center justify-between">
         <div className="space-y-1 text-xs text-brand-dark/60">
-          <p>Görsel yüklendiğinde PDF ve WebP versiyonları otomatik üretilir.</p>
+          <p>GÃ¶rsel yÃ¼klendiÄŸinde PDF ve WebP versiyonlarÄ± otomatik Ã¼retilir.</p>
         </div>
         <Button type="submit" disabled={isPending}>
           {isPending ? "Kaydediliyor..." : "Kaydet"}

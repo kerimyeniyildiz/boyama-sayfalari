@@ -61,7 +61,7 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-3">
-          <Button asChild variant="ghost" size="icon" aria-label="Ara">
+          <Button asChild variant="ghost" size="icon" aria-label="Boyama sayfası ara">
             <Link href="/ara">
               <Search className="h-5 w-5" />
             </Link>

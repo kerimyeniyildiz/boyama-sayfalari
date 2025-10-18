@@ -41,7 +41,7 @@ export function ColoringPageCard({
   return (
     <Card className={cn("h-full overflow-hidden", className)}>
       <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-brand-light">
-        <Link href={/sayfa/}>
+        <Link href={`/sayfa/${page.slug}`}>
           <Image
             src={thumbLargeUrl}
             alt={page.title}
@@ -59,7 +59,7 @@ export function ColoringPageCard({
       </div>
       <CardContent className="pt-6">
         <Link
-          href={/sayfa/}
+          href={`/sayfa/${page.slug}`}
           className="text-lg font-semibold text-brand-dark"
         >
           {page.title}
@@ -71,7 +71,7 @@ export function ColoringPageCard({
           {page.categories.slice(0, 2).map((category) => (
             <Link
               key={category.category.id}
-              href={/kategori/}
+              href={`/kategori/${category.category.slug}`}
               className="rounded-full border border-brand-dark/10 px-3 py-1 hover:border-brand-dark/40"
             >
               {category.category.name}

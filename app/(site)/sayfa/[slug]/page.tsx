@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: PageProps) {
 
   if (!page) {
     return buildMetadata({
-      title: "Boyama sayfasi bulunamadi",
+      title: "Boyama sayfası bulunamadı",
       description: siteConfig.description,
       path: `/sayfa/${params.slug}`
     });

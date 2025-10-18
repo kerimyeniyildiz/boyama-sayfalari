@@ -33,7 +33,7 @@ type Props = {
 export function ColoringPageDetail({ page, related }: Props) {
   const imageLarge = getPublicUrl(page.thumbWebpKey);
   const imageSmall = imageLarge.replace("-800.webp", "-400.webp");
-  const pdfRoute = /api/download/ as Route;
+  const pdfRoute = `/api/download/${page.slug}` as Route;
 
   return (
     <section className="container py-12">
@@ -61,7 +61,7 @@ export function ColoringPageDetail({ page, related }: Props) {
                   Boyut
                 </dt>
                 <dd>
-                  {page.width ?? "?"}x{page.height ?? "?"} px •
+                  {page.width ?? "?"}x{page.height ?? "?"} px Â·
                   {" "}
                   {Math.round((page.fileSizeBytes ?? 0) / 1024)} KB
                 </dd>
@@ -74,7 +74,7 @@ export function ColoringPageDetail({ page, related }: Props) {
                   {page.categories.map((category) => (
                     <Link
                       key={category.category.id}
-                      href={/kategori/ as Route}
+                      href={`/kategori/${category.category.slug}` as Route}
                       className="rounded-full border border-brand-dark/20 px-3 py-1 text-xs text-brand-dark/70 transition hover:border-brand-dark/40 hover:text-brand-dark"
                     >
                       {category.category.name}
@@ -90,7 +90,7 @@ export function ColoringPageDetail({ page, related }: Props) {
                   {page.tags.map((tag) => (
                     <Link
                       key={tag.tag.id}
-                      href={/etiket/ as Route}
+                      href={`/etiket/${tag.tag.slug}` as Route}
                       className="rounded-full bg-brand-light px-3 py-1 text-xs text-brand-dark/70 transition hover:bg-brand"
                     >
                       #{tag.tag.name}
@@ -108,7 +108,7 @@ export function ColoringPageDetail({ page, related }: Props) {
               </Link>
             </Button>
             <p className="text-xs text-brand-dark/60">
-              Ýndirme linki Cloudflare R2 ile güvenli þekilde yönlendirilir.
+              Ä°ndirme linki Cloudflare R2 ile gÃ¼venli ÅŸekilde yÃ¶nlendirilir.
             </p>
           </div>
         </div>
@@ -117,7 +117,7 @@ export function ColoringPageDetail({ page, related }: Props) {
       {related.length > 0 ? (
         <div className="mt-16">
           <h2 className="text-2xl font-semibold text-brand-dark">
-            Benzer boyama sayfalarý
+            Benzer boyama sayfalarÄ±
           </h2>
           <div className="mt-6 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {related.slice(0, 3).map((pageItem) => (

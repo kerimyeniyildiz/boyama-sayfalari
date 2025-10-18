@@ -29,12 +29,12 @@ export async function generateMetadata({ searchParams }: PageProps) {
   });
 
   const query = parsed.success ? parsed.data.q : undefined;
-  const suffix = query ? `${query} aramasi` : "Boyama sayfasi arama";
+  const suffix = query ? `${query} araması` : "Boyama sayfası arama";
 
   return buildMetadata({
     title: `${suffix} | ${siteConfig.name}`,
     description:
-      "Boyama sayfalarini kategori ve etiket filtreleriyle hizlica bul.",
+      "Boyama sayfalarını kategori ve etiket filtreleriyle hızlıca bul.",
     path: "/ara"
   });
 }

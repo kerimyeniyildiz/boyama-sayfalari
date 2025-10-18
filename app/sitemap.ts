@@ -58,7 +58,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       });
     }
   } catch (error) {
-    console.error("Sitemap generation skipped due to database error", error);
+    console.error("Veritabanı hatası nedeniyle sitemap oluşturma atlandı", error);
   }
 
   return entries;

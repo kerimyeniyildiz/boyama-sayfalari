@@ -95,16 +95,16 @@ export async function GET(request: Request) {
       return jsonError(
         400,
         "INVALID_QUERY",
-        "Gecersiz filtre parametreleri.",
+        "Geçersiz filtre parametreleri.",
         fieldErrors
       );
     }
 
-    console.error("Admin page listesi getirilirken hata olustu", error);
+    console.error("Admin page listesi getirilirken hata oluştu", error);
     return jsonError(
       500,
       "PAGE_LIST_FAILED",
-      "Sayfalar yuklenirken bir hata olustu."
+      "Sayfalar yüklenirken bir hata oluştu."
     );
   }
 }
@@ -117,8 +117,8 @@ export async function POST(request: Request) {
     | null;
 
   if (!(rawImage instanceof File) || rawImage.size === 0) {
-    return jsonError(400, "IMAGE_REQUIRED", "Gorsel yuklenmedi.", {
-      image: ["Gorsel yuklenmesi zorunludur."]
+    return jsonError(400, "IMAGE_REQUIRED", "Görsel yüklenmedi.", {
+      image: ["Görsel yüklenmesi zorunludur."]
     });
   }
 
@@ -126,9 +126,9 @@ export async function POST(request: Request) {
     return jsonError(
       400,
       "INVALID_IMAGE_TYPE",
-      "Gorsel yalnizca PNG, JPEG, SVG veya WebP formatinda olabilir.",
+      "Görsel yalnızca PNG, JPEG, SVG veya WebP formatında olabilir.",
       {
-        image: ["Gorsel yalnizca PNG, JPEG, SVG veya WebP formatinda olabilir."]
+        image: ["Görsel yalnızca PNG, JPEG, SVG veya WebP formatında olabilir."]
       }
     );
   }
@@ -137,9 +137,9 @@ export async function POST(request: Request) {
     return jsonError(
       400,
       "IMAGE_TOO_LARGE",
-      `Gorsel ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sinirini asiyor.`,
+      `Görsel ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sınırını aşıyor.`,
       {
-        image: [`Gorsel ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sinirini asiyor.`]
+        image: [`Görsel ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sınırını aşıyor.`]
       }
     );
   }
@@ -162,7 +162,7 @@ export async function POST(request: Request) {
     return jsonError(
       400,
       "VALIDATION_ERROR",
-      "Form alanlarinda hatalar var.",
+      "Form alanlarında hatalar var.",
       fieldErrors
     );
   }
@@ -228,7 +228,7 @@ export async function POST(request: Request) {
       data: {
         slug: metadata.slug,
         title: metadata.title,
-        description: `${metadata.title} boyama sayfasi.`,
+        description: `${metadata.title} boyama sayfası.`,
         orientation: "PORTRAIT",
         status: PageStatus.PUBLISHED,
         language: "tr",
@@ -268,11 +268,11 @@ export async function POST(request: Request) {
     await Promise.all(
       uploadedKeys.map((key) => deleteFromR2(key).catch(() => undefined))
     );
-    console.error("Yeni sayfa olusturulamadi", error);
+    console.error("Yeni sayfa oluşturulamadı", error);
     return jsonError(
       500,
       "PAGE_CREATE_FAILED",
-      "Sayfa olusturulurken bir hata olustu."
+      "Sayfa oluşturulurken bir hata oluştu."
     );
   }
 }

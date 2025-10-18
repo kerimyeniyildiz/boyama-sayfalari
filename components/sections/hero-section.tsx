@@ -20,20 +20,20 @@ export function HeroSection({ categories }: HeroSectionProps) {
       <div className="space-y-6">
         <span className="inline-flex items-center gap-2 rounded-full border border-brand-dark/20 bg-white px-4 py-2 text-sm text-brand-dark/70">
           <Sparkles className="h-4 w-4 text-brand-dark" />
-          Yeni: Turkce boyama koleksiyonlari
+          Yeni: Türkçe boyama koleksiyonları
         </span>
         <h1 className="text-4xl font-bold text-brand-dark md:text-5xl">
-          Cocuklar icin yaratici boyama dunyasi
+          Çocuklar için yaratıcı boyama dünyası
         </h1>
         <p className="text-lg text-brand-dark/80">
-          Kategorilere ve etiketlere gore filtrelenmis, yazdirmaya hazir PDF boyama sayfalari. Hemen indir, renklendir ve paylas.
+          Kategorilere ve etiketlere göre filtrelenmiş, yazdırmaya hazır PDF boyama sayfaları. Hemen indir, renklendir ve paylaş.
         </p>
         <div className="flex flex-wrap gap-4">
           <Button asChild size="lg">
-            <Link href="/ara">Boyama Sayfasi Ara</Link>
+            <Link href="/ara">Boyama Sayfası Ara</Link>
           </Button>
           <Button asChild variant="outline" size="lg">
-            <Link href="/kategori/hayvanlar">Populer Kategoriler</Link>
+            <Link href="/kategori/hayvanlar">Popüler Kategoriler</Link>
           </Button>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -52,7 +52,7 @@ export function HeroSection({ categories }: HeroSectionProps) {
                 </p>
               </div>
               <span className="text-brand-dark/60 transition group-hover:text-brand-dark">
-                �
+                →
               </span>
             </Link>
           ))}
@@ -64,17 +64,17 @@ export function HeroSection({ categories }: HeroSectionProps) {
           <div className="flex flex-col gap-6">
             <div>
               <p className="text-sm font-medium text-brand-dark/70">
-                One cikiyor
+                Öne çıkıyor
               </p>
               <p className="text-2xl font-semibold text-brand-dark">
-                150+ ozel boyama sayfasi
+                150+ özel boyama sayfası
               </p>
             </div>
             <ul className="space-y-3 text-sm text-brand-dark/70">
-              <li>PDF ve WebP formatlarinda hizli indirme</li>
-              <li>Cloudflare R2 ile guvenli saklama</li>
+              <li>PDF ve WebP formatlarında hızlı indirme</li>
+              <li>Cloudflare R2 ile güvenli saklama</li>
               <li>Arama ve etiketlerle kolay filtreleme</li>
-              <li>SEO ve performans icin optimize edildi</li>
+              <li>SEO ve performans için optimize edildi</li>
             </ul>
           </div>
         </div>

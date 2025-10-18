@@ -78,7 +78,7 @@ export async function PUT(
   });
 
   if (!existingPage) {
-    return jsonError(404, "PAGE_NOT_FOUND", "Sayfa bulunamadý.");
+    return jsonError(404, "PAGE_NOT_FOUND", "Sayfa bulunamadÄ±.");
   }
 
   const imageFile = (formData.get("image") ?? formData.get("cover")) as
@@ -108,7 +108,7 @@ export async function PUT(
     return jsonFieldError(
       400,
       "VALIDATION_ERROR",
-      "Form alanlarýnda hatalar var.",
+      "Form alanlarÄ±nda hatalar var.",
       parsed.error.flatten().fieldErrors as Record<string, string[]>
     );
   }
@@ -120,9 +120,9 @@ export async function PUT(
     return jsonFieldError(
       400,
       "IMAGE_REQUIRED_FOR_SLUG_CHANGE",
-      "Slug deðiþtirildiðinde görselin yeniden yüklenmesi gerekir.",
+      "Slug deÄŸiÅŸtirildiÄŸinde gÃ¶rselin yeniden yÃ¼klenmesi gerekir.",
       {
-        image: ["Slug deðiþtirildiðinde görselin yeniden yüklenmesi gerekir."]
+        image: ["Slug deÄŸiÅŸtirildiÄŸinde gÃ¶rselin yeniden yÃ¼klenmesi gerekir."]
       }
     );
   }
@@ -135,9 +135,9 @@ export async function PUT(
       return jsonFieldError(
         400,
         "INVALID_IMAGE_TYPE",
-        "Görsel yalnýzca PNG, JPEG, SVG veya WebP formatýnda olabilir.",
+        "GÃ¶rsel yalnÄ±zca PNG, JPEG, SVG veya WebP formatÄ±nda olabilir.",
         {
-          image: ["Görsel yalnýzca PNG, JPEG, SVG veya WebP formatýnda olabilir."]
+          image: ["GÃ¶rsel yalnÄ±zca PNG, JPEG, SVG veya WebP formatÄ±nda olabilir."]
         }
       );
     }
@@ -146,9 +146,9 @@ export async function PUT(
       return jsonFieldError(
         400,
         "IMAGE_TOO_LARGE",
-        `Görsel ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sýnýrýný aþýyor.`,
+        `GÃ¶rsel ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sÄ±nÄ±rÄ±nÄ± aÅŸÄ±yor.`,
         {
-          image: [`Görsel ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sýnýrýný aþýyor.`]
+          image: [`GÃ¶rsel ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sÄ±nÄ±rÄ±nÄ± aÅŸÄ±yor.`]
         }
       );
     }
@@ -232,7 +232,7 @@ export async function PUT(
       data: {
         slug: metadata.slug,
         title: metadata.title,
-        description: `${metadata.title} boyama sayfasi.`,
+        description: `${metadata.title} boyama sayfasÄ±.`,
         orientation: "PORTRAIT",
         pdfKey,
         coverImageKey: coverKey,
@@ -283,11 +283,11 @@ export async function PUT(
     await Promise.all(
       uploadedKeys.map((key) => deleteFromR2(key).catch(() => undefined))
     );
-    console.error("Sayfa güncellenemedi", error);
+    console.error("Sayfa gÃ¼ncellenemedi", error);
     return jsonError(
       500,
       "PAGE_UPDATE_FAILED",
-      "Sayfa güncellenirken bir hata oluþtu."
+      "Sayfa gÃ¼ncellenirken bir hata oluÅŸtu."
     );
   }
 }
@@ -305,7 +305,7 @@ export async function DELETE(
   });
 
   if (!page) {
-    return jsonError(404, "PAGE_NOT_FOUND", "Sayfa bulunamadý.");
+    return jsonError(404, "PAGE_NOT_FOUND", "Sayfa bulunamadÄ±.");
   }
 
   const categorySlugs = new Set(page.categories.map((entry) => entry.category.slug));
@@ -334,7 +334,7 @@ export async function DELETE(
     return jsonError(
       500,
       "PAGE_DELETE_FAILED",
-      "Sayfa silinirken bir hata oluþtu."
+      "Sayfa silinirken bir hata oluÅŸtu."
     );
   }
 
