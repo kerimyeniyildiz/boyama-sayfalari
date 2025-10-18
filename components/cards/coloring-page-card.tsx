@@ -8,6 +8,7 @@ import type {
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { FALLBACK_BLUR_DATA_URL } from "@/lib/placeholders";
 import { getPublicUrl } from "@/lib/r2";
 import { cn } from "@/lib/utils";
 
@@ -35,8 +36,14 @@ export function ColoringPageCard({
   priority,
   className
 }: ColoringPageCardProps) {
-  const thumbLargeUrl = getPublicUrl(page.thumbWebpKey);
-  const thumbSmallUrl = thumbLargeUrl.replace("-800.webp", "-400.webp");
+  const hasThumbKey = Boolean(page.thumbWebpKey);
+  const thumbLargeUrl = hasThumbKey
+    ? getPublicUrl(page.thumbWebpKey)
+    : FALLBACK_BLUR_DATA_URL;
+  const blurDataURL =
+    hasThumbKey && page.thumbWebpKey.includes("-400.")
+      ? getPublicUrl(page.thumbWebpKey)
+      : FALLBACK_BLUR_DATA_URL;
 
   return (
     <Card className={cn("h-full overflow-hidden", className)}>
@@ -50,7 +57,8 @@ export function ColoringPageCard({
             className="object-cover transition-transform duration-500 hover:scale-105"
             priority={priority}
             placeholder="blur"
-            blurDataURL={thumbSmallUrl}
+            blurDataURL={blurDataURL}
+            unoptimized={!hasThumbKey}
           />
         </Link>
         <div className="absolute bottom-4 left-4 flex items-center gap-2">

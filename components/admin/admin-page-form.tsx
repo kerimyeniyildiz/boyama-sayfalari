@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import slugify from "slugify";
@@ -61,8 +61,29 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
     image: undefined
   };
 
+  const resolver: Resolver<InternalFormValues> = async (
+    values,
+    context,
+    options
+  ) => {
+    const baseResolver = zodResolver(pageMetadataSchema);
+    const result = await baseResolver(values, context, options);
+
+    if (!result.values) {
+      return result;
+    }
+
+    return {
+      values: {
+        ...result.values,
+        image: values.image
+      },
+      errors: result.errors
+    };
+  };
+
   const form = useForm<InternalFormValues>({
-    resolver: zodResolver(pageMetadataSchema) as any,
+    resolver,
     defaultValues
   });
 

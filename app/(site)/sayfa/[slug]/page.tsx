@@ -11,6 +11,19 @@ import { ColoringPageDetail } from "@/components/sections/coloring-page-detail";
 
 export const dynamic = "force-dynamic";
 
+function normalizeDate(
+  value: Date | string | null | undefined
+): Date | undefined {
+  if (!value) {
+    return undefined;
+  }
+  if (value instanceof Date) {
+    return value;
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
 type PageProps = {
   params: {
     slug: string;
@@ -29,6 +42,8 @@ export async function generateMetadata({ params }: PageProps) {
   }
 
   const imageUrl = getPublicUrl(page.thumbWebpKey);
+  const createdAt = normalizeDate(page.createdAt);
+  const updatedAt = normalizeDate(page.updatedAt);
 
   return buildMetadata({
     title: page.title,
@@ -41,8 +56,8 @@ export async function generateMetadata({ params }: PageProps) {
       alt: page.title
     },
     type: "article",
-    publishedTime: page.createdAt.toISOString(),
-    modifiedTime: page.updatedAt.toISOString()
+    publishedTime: createdAt?.toISOString(),
+    modifiedTime: updatedAt?.toISOString()
   });
 }
 
@@ -60,6 +75,8 @@ export default async function ColoringPageRoute({ params }: PageProps) {
 
   const pdfUrl = getPublicUrl(page.pdfKey);
   const imageUrl = getPublicUrl(page.thumbWebpKey);
+  const createdAt = normalizeDate(page.createdAt);
+  const updatedAt = normalizeDate(page.updatedAt);
 
   const jsonLd = buildCreativeWorkJsonLd({
     name: page.title,
@@ -75,8 +92,8 @@ export default async function ColoringPageRoute({ params }: PageProps) {
       ...page.categories.map((entry) => entry.category.name),
       ...page.tags.map((entry) => entry.tag.name)
     ],
-    datePublished: page.createdAt.toISOString(),
-    dateModified: page.updatedAt.toISOString()
+    datePublished: createdAt?.toISOString(),
+    dateModified: updatedAt?.toISOString()
   });
 
   return (

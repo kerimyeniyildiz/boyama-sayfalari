@@ -10,6 +10,7 @@ import { FileDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ColoringPageCard } from "@/components/cards/coloring-page-card";
+import { FALLBACK_BLUR_DATA_URL } from "@/lib/placeholders";
 import { getPublicUrl } from "@/lib/r2";
 
 type ColoringPageWithRelations = ColoringPage & {
@@ -31,8 +32,14 @@ type Props = {
 };
 
 export function ColoringPageDetail({ page, related }: Props) {
-  const imageLarge = getPublicUrl(page.thumbWebpKey);
-  const imageSmall = imageLarge.replace("-800.webp", "-400.webp");
+  const hasThumbKey = Boolean(page.thumbWebpKey);
+  const imageLarge = hasThumbKey
+    ? getPublicUrl(page.thumbWebpKey)
+    : FALLBACK_BLUR_DATA_URL;
+  const blurDataURL =
+    hasThumbKey && page.thumbWebpKey.includes("-400.")
+      ? getPublicUrl(page.thumbWebpKey)
+      : FALLBACK_BLUR_DATA_URL;
   const pdfRoute = `/api/download/${page.slug}` as Route;
 
   return (
@@ -46,7 +53,8 @@ export function ColoringPageDetail({ page, related }: Props) {
             sizes="(max-width: 1024px) 100vw, 60vw"
             className="object-contain"
             placeholder="blur"
-            blurDataURL={imageSmall}
+            blurDataURL={blurDataURL}
+            unoptimized={!hasThumbKey}
           />
         </div>
         <div className="flex flex-col justify-between gap-8 rounded-3xl border border-brand-dark/10 bg-white/90 p-8 shadow-card">
