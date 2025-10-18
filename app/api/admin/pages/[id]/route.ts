@@ -41,6 +41,21 @@ function jsonError(
   return NextResponse.json(body, { status });
 }
 
+function normalizeFieldErrors(
+  fieldErrors: Record<string, string[] | undefined>
+): Record<string, string[]> | undefined {
+  const entries = Object.entries(fieldErrors).filter(
+    (entry): entry is [string, string[]] =>
+      Array.isArray(entry[1]) && entry[1].length > 0
+  );
+
+  if (entries.length === 0) {
+    return undefined;
+  }
+
+  return Object.fromEntries(entries);
+}
+
 function toString(value: FormDataEntryValue | null): string {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -119,7 +134,9 @@ export async function PUT(
 
   const parsed = pageMetadataSchema.safeParse(metadataInput);
   if (!parsed.success) {
-    const fieldErrors = parsed.error.flatten().fieldErrors;
+    const fieldErrors = normalizeFieldErrors(
+      parsed.error.flatten().fieldErrors
+    );
     return jsonError(
       400,
       "VALIDATION_ERROR",
