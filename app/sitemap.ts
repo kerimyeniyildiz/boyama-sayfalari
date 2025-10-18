@@ -33,7 +33,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     for (const page of pages) {
       entries.push({
-        url: `${baseUrl}/sayfa/${page.slug}`,
+        url: `${baseUrl}/${page.slug}`,
         lastModified: page.updatedAt,
         changeFrequency: "weekly",
         priority: 0.9

@@ -84,7 +84,14 @@ function collectStrings(values: FormDataEntryValue[]): string[] {
 
 function deriveSlugFromFile(file: File) {
   const withoutExtension = file.name.replace(/\.[^/.]+$/, "");
-  return slugifyTr(withoutExtension);
+  const normalized = withoutExtension
+    .replace(/[_\s]+/g, " ")
+    .replace(/([a-z0-9])([A-Z])/g, (_match, part1: string, part2: string) => `${part1} ${part2}`)
+    .trim();
+  const lowered = normalized.replace(/[A-Z]/g, (character) =>
+    character.toLowerCase()
+  );
+  return slugifyTr(lowered);
 }
 
 function humanizeSlug(slug: string) {
@@ -365,9 +372,9 @@ export async function POST(request: Request) {
     revalidatePath("/");
     revalidatePath("/ara");
     revalidatePath("/admin/pages");
-    revalidatePath(`/sayfa/${parentSlug}`);
+    revalidatePath(`/${parentSlug}`);
     createdSlugs.slice(1).forEach((slug) => {
-      revalidatePath(`/sayfa/${slug}`);
+      revalidatePath(`/${slug}`);
     });
     metadata.categories.forEach((slug) => {
       revalidatePath(`/kategori/${slug}`);

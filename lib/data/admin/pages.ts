@@ -42,7 +42,9 @@ export async function getAdminPages(
   const pageSize = filters.pageSize;
   const skip = (page - 1) * pageSize;
 
-  const where: Prisma.ColoringPageWhereInput = {};
+  const where: Prisma.ColoringPageWhereInput = {
+    parentId: null
+  };
 
   if (filters.status !== "ALL") {
     where.status = filters.status;

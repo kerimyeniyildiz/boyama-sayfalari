@@ -1,4 +1,4 @@
-import Image from "next/image";
+﻿import Image from "next/image";
 import Link from "next/link";
 import type { Route } from "next";
 
@@ -42,19 +42,19 @@ function resolveImageKeys(entry: PageEntry) {
     const blur = entry.thumbWebpKey.includes("-800.")
       ? getPublicUrl(entry.thumbWebpKey.replace("-800.", "-400."))
       : FALLBACK_BLUR_DATA_URL;
-    return { large, blur, optimized: true };
+    return { large, blur, optimized: true } as const;
   }
 
   if (entry.coverImageKey) {
     const url = getPublicUrl(entry.coverImageKey);
-    return { large: url, blur: url, optimized: true };
+    return { large: url, blur: url, optimized: true } as const;
   }
 
   return {
     large: FALLBACK_BLUR_DATA_URL,
     blur: FALLBACK_BLUR_DATA_URL,
     optimized: false
-  };
+  } as const;
 }
 
 function buildExtraEntries(page: ColoringPageDetail): PageEntry[] {
@@ -92,24 +92,17 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
         </div>
         <div className="flex flex-col justify-between gap-8 rounded-3xl border border-brand-dark/10 bg-white/90 p-8 shadow-card">
           <div className="space-y-4">
-            <h1 className="text-3xl font-semibold text-brand-dark">
-              {page.title}
-            </h1>
+            <h1 className="text-3xl font-semibold text-brand-dark">{page.title}</h1>
             <p className="text-brand-dark/70">{page.description}</p>
             <dl className="grid gap-2 text-sm text-brand-dark/70">
               <div className="flex gap-2">
-                <dt className="min-w-[120px] font-medium text-brand-dark">
-                  Boyut
-                </dt>
+                <dt className="min-w-[120px] font-medium text-brand-dark">Boyut</dt>
                 <dd>
-                  {primaryEntry.width ?? "?"}x{primaryEntry.height ?? "?"} px · {" "}
-                  {Math.round((page.fileSizeBytes ?? 0) / 1024)} KB
+                  {primaryEntry.width ?? "?"}x{primaryEntry.height ?? "?"} px · {Math.round((page.fileSizeBytes ?? 0) / 1024)} KB
                 </dd>
               </div>
               <div className="flex gap-2">
-                <dt className="min-w-[120px] font-medium text-brand-dark">
-                  Kategoriler
-                </dt>
+                <dt className="min-w-[120px] font-medium text-brand-dark">Kategoriler</dt>
                 <dd className="flex flex-wrap gap-2">
                   {page.categories.map((category) => (
                     <Link
@@ -123,9 +116,7 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
                 </dd>
               </div>
               <div className="flex gap-2">
-                <dt className="min-w-[120px] font-medium text-brand-dark">
-                  Etiketler
-                </dt>
+                <dt className="min-w-[120px] font-medium text-brand-dark">Etiketler</dt>
                 <dd className="flex flex-wrap gap-2">
                   {page.tags.map((tag) => (
                     <Link
@@ -142,35 +133,32 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
           </div>
           <div className="flex flex-col gap-3">
             <Button asChild size="lg" className="w-full">
-              <Link href={pdfRoute}>PDF indir</Link>
+              <Link href={pdfRoute}>📥 PDF indir</Link>
             </Button>
-            <p className="text-xs text-brand-dark/60">
-              İndirme linki Cloudflare R2 ile güvenli şekilde yönlendirilir.
-            </p>
           </div>
         </div>
       </div>
 
       {extraEntries.length > 0 ? (
         <div className="mt-16 space-y-6">
-          <h2 className="text-2xl font-semibold text-brand-dark">
-            Ek boyama görselleri
-          </h2>
+          <h2 className="text-2xl font-semibold text-brand-dark">Ek boyama görselleri</h2>
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {extraEntries.map((entry) => {
               if (isChild && entry.id === page.id) {
                 return null;
               }
 
-              const { large: entryImage, blur: entryBlur, optimized: entryOptimized } =
-                resolveImageKeys(entry);
+              const { large: entryImage, blur: entryBlur, optimized: entryOptimized } = resolveImageKeys(entry);
 
               return (
                 <div
                   key={entry.id}
                   className="flex flex-col gap-3 rounded-2xl border border-brand-dark/10 bg-white p-4 shadow-card"
                 >
-                  <div className="relative aspect-[3/4] overflow-hidden rounded-xl bg-brand-light">
+                  <Link
+                    href={`/${entry.slug}` as Route}
+                    className="relative block aspect-[3/4] overflow-hidden rounded-xl bg-brand-light"
+                  >
                     <Image
                       src={entryImage}
                       alt={entry.title}
@@ -181,16 +169,14 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
                       blurDataURL={entryBlur}
                       unoptimized={!entryOptimized}
                     />
-                  </div>
+                  </Link>
                   <div className="flex flex-col gap-2">
-                    <h3 className="text-base font-semibold text-brand-dark">
-                      {entry.title}
-                    </h3>
+                    <h3 className="text-base font-semibold text-brand-dark">{entry.title}</h3>
                     <Link
-                      href={`/sayfa/${entry.slug}` as Route}
-                      className="text-sm font-medium text-brand transition hover:text-brand-dark"
+                      href={`/${entry.slug}` as Route}
+                      className="text-center text-sm font-medium text-brand transition hover:text-brand-dark"
                     >
-                      Boyama sayfasını indir
+                      🎨 Boyama sayfasını indir
                     </Link>
                   </div>
                 </div>

@@ -38,7 +38,7 @@ export default async function HomePage() {
     url: siteConfig.url,
     items: featured.map((page) => ({
       name: page.title,
-      url: `${siteConfig.url}/sayfa/${page.slug}`,
+      url: `${siteConfig.url}/${page.slug}`,
       image: getPublicUrl(page.thumbWebpKey),
       description: page.description
     }))

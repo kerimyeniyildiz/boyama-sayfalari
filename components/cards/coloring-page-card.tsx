@@ -45,13 +45,13 @@ export function ColoringPageCard({
   return (
     <Card className={cn("h-full overflow-hidden", className)}>
       <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-brand-light">
-        <Link href={`/sayfa/${page.slug}`}>
+        <Link href={`/${page.slug}`}>
           <Image
             src={large}
             alt={page.title}
             fill
             sizes="(max-width: 768px) 100vw, 33vw"
-            className="object-cover transition-transform duration-500 hover:scale-105"
+            className="object-contain object-center transition-transform duration-500 hover:scale-105"
             priority={priority}
             placeholder="blur"
             blurDataURL={small ?? FALLBACK_BLUR_DATA_URL}
@@ -64,7 +64,7 @@ export function ColoringPageCard({
       </div>
       <CardContent className="pt-6">
         <Link
-          href={`/sayfa/${page.slug}`}
+          href={`/${page.slug}`}
           className="text-lg font-semibold text-brand-dark"
         >
           {page.title}

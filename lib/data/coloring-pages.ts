@@ -146,11 +146,19 @@ export async function getColoringPageBySlug(
 export async function getColoringPageById(
   id: string
 ): Promise<ColoringPageDetail | null> {
-  return cacheResult<ColoringPageDetail | null>(
-    ["coloring-page-id", id],
-    async () =>
-      prisma.coloringPage.findUnique({
-        where: { id },
+  return prisma.coloringPage.findUnique({
+    where: { id },
+    include: {
+      categories: { include: { category: true } },
+      tags: { include: { tag: true } },
+      children: {
+        include: {
+          categories: { include: { category: true } },
+          tags: { include: { tag: true } }
+        },
+        orderBy: { createdAt: "asc" }
+      },
+      parent: {
         include: {
           categories: { include: { category: true } },
           tags: { include: { tag: true } },
@@ -160,23 +168,11 @@ export async function getColoringPageById(
               tags: { include: { tag: true } }
             },
             orderBy: { createdAt: "asc" }
-          },
-          parent: {
-            include: {
-              categories: { include: { category: true } },
-              tags: { include: { tag: true } },
-              children: {
-                include: {
-                  categories: { include: { category: true } },
-                  tags: { include: { tag: true } }
-                },
-                orderBy: { createdAt: "asc" }
-              }
-            }
           }
         }
-      })
-  );
+      }
+    }
+  });
 }
 
 export async function getRelatedPages(

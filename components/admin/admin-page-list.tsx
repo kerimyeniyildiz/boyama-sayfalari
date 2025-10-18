@@ -161,7 +161,7 @@ export function AdminPageList({ items, pagination, filters }: AdminPageListProps
                         </Button>
                         <Button asChild size="sm" variant="ghost">
                           <Link
-                            href={`/sayfa/${page.slug}` as Route}
+                            href={`/${page.slug}` as Route}
                             target="_blank"
                             rel="noreferrer"
                           >

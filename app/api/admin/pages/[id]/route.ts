@@ -284,7 +284,7 @@ export async function PUT(
       select: {
         id: true,
         slug: true,
-        parent: { select: { slug: true } }
+        parent: { select: { id: true, slug: true } }
       }
     });
 
@@ -296,12 +296,12 @@ export async function PUT(
 
     revalidatePath("/");
     revalidatePath("/ara");
-    revalidatePath(`/sayfa/${updatedPage.slug}`);
+    revalidatePath(`/${updatedPage.slug}`);
     if (slugChanged) {
-      revalidatePath(`/sayfa/${existingPage.slug}`);
+      revalidatePath(`/${existingPage.slug}`);
     }
     if (updatedPage.parent?.slug) {
-      revalidatePath(`/sayfa/${updatedPage.parent.slug}`);
+      revalidatePath(`/${updatedPage.parent.slug}`);
     }
     metadata.categories.forEach((slug) => {
       revalidatePath(`/kategori/${slug}`);
@@ -310,6 +310,10 @@ export async function PUT(
       revalidatePath(`/etiket/${slug}`);
     });
     revalidatePath("/admin/pages");
+    revalidatePath(`/admin/pages/${params.id}/edit`);
+    if (updatedPage.parent?.id) {
+      revalidatePath(`/admin/pages/${updatedPage.parent.id}/edit`);
+    }
 
     return NextResponse.json({ success: true, page: updatedPage });
   } catch (error) {
@@ -351,7 +355,7 @@ export async function DELETE(
     include: {
       categories: { include: { category: { select: { slug: true } } } },
       tags: { include: { tag: { select: { slug: true } } } },
-      parent: { select: { slug: true } },
+      parent: { select: { id: true, slug: true } },
       children: {
         select: {
           id: true,
@@ -406,8 +410,12 @@ export async function DELETE(
   revalidatePath("/");
   revalidatePath("/ara");
   revalidatePath("/admin/pages");
+  revalidatePath(`/admin/pages/${params.id}/edit`);
+  if (page.parent?.id) {
+    revalidatePath(`/admin/pages/${page.parent.id}/edit`);
+  }
   slugsToRevalidate.forEach((slug) => {
-    revalidatePath(`/sayfa/${slug}`);
+    revalidatePath(`/${slug}`);
   });
   for (const slug of categorySlugs) {
     revalidatePath(`/kategori/${slug}`);

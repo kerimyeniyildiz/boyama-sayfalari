@@ -114,7 +114,7 @@ export function AdminDashboard({ stats }: AdminDashboardProps) {
               >
                 <div>
                   <Link
-                    href={`/sayfa/${page.slug}`}
+                    href={`/${page.slug}`}
                     className="text-sm font-semibold text-brand-dark hover:text-brand"
                   >
                     {page.title}
@@ -149,7 +149,7 @@ export function AdminDashboard({ stats }: AdminDashboardProps) {
               >
                 <div>
                   <Link
-                    href={`/sayfa/${event.page.slug}`}
+                    href={`/${event.page.slug}`}
                     className="text-sm font-semibold text-brand-dark hover:text-brand"
                   >
                     {event.page.title}

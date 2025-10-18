@@ -44,7 +44,7 @@ export default async function CategoryPage({ params }: PageProps) {
     url: `${siteConfig.url}/kategori/${category.slug}`,
     items: category.pages.map((page) => ({
       name: page.title,
-      url: `${siteConfig.url}/sayfa/${page.slug}`,
+      url: `${siteConfig.url}/${page.slug}`,
       image: getPublicUrl(page.thumbWebpKey),
       description: page.description
     }))

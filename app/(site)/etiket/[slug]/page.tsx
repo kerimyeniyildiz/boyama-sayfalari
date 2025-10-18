@@ -45,7 +45,7 @@ export default async function TagPage({ params }: PageProps) {
     url: `${siteConfig.url}/etiket/${tag.slug}`,
     items: tag.pages.map((page) => ({
       name: page.title,
-      url: `${siteConfig.url}/sayfa/${page.slug}`,
+      url: `${siteConfig.url}/${page.slug}`,
       image: getPublicUrl(page.thumbWebpKey),
       description: page.description
     }))
