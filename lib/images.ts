@@ -1,4 +1,5 @@
 import sharp from "sharp";
+import { PDFDocument } from "pdf-lib";
 
 export type ImageAssets = {
   cover: Buffer;
@@ -56,7 +57,7 @@ export async function generateImageAssets(buffer: Buffer): Promise<ImageAssets> 
 }
 
 export async function generatePdfFromImage(buffer: Buffer): Promise<Buffer> {
-  return sharp(buffer)
+  const pngBuffer = await sharp(buffer)
     .rotate()
     .resize({
       width: 2480,
@@ -64,8 +65,37 @@ export async function generatePdfFromImage(buffer: Buffer): Promise<Buffer> {
       fit: "contain",
       background: { r: 255, g: 255, b: 255, alpha: 1 }
     })
-    .toFormat("pdf")
+    .png({ quality: 100 })
     .toBuffer();
+
+  const pdfDoc = await PDFDocument.create();
+  const pngImage = await pdfDoc.embedPng(pngBuffer);
+
+  const pageWidth = 2480;
+  const pageHeight = 3508;
+  const page = pdfDoc.addPage([pageWidth, pageHeight]);
+
+  const imageWidth = pngImage.width;
+  const imageHeight = pngImage.height;
+  const scale = Math.min(
+    pageWidth / imageWidth,
+    pageHeight / imageHeight,
+    1
+  );
+  const drawWidth = imageWidth * scale;
+  const drawHeight = imageHeight * scale;
+  const x = (pageWidth - drawWidth) / 2;
+  const y = (pageHeight - drawHeight) / 2;
+
+  page.drawImage(pngImage, {
+    x,
+    y,
+    width: drawWidth,
+    height: drawHeight
+  });
+
+  const pdfBytes = await pdfDoc.save();
+  return Buffer.from(pdfBytes);
 }
 
 export function getBufferSize(buffer: Buffer): number {
