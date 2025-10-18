@@ -21,7 +21,7 @@ describe("pageMetadataSchema", () => {
 
   it("accepts a minimal valid payload", () => {
     const result = pageMetadataSchema.safeParse({
-      title: "Orman Dostlarý",
+      title: "Orman DostlarÄ±",
       slug: "orman-dostlari",
       categories: ["hayvanlar"],
       tags: ["orman"]

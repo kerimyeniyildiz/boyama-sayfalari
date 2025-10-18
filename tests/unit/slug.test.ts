@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { slugify } from "@/lib/slug";
 
@@ -11,4 +11,3 @@ describe("slugify", () => {
     expect(slugify("  Uzay! Keşifçileri 2025 ")).toBe("uzay-kesifcileri-2025");
   });
 });
-
