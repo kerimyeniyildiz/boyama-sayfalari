@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "datamodel": "schema.prisma",
+  "migrations": [
+    {
+      "checksum": "",
+      "finished_at": null,
+      "migration_name": "0001_init",
+      "logs": [],
+      "started_at": null
+    },
+    {
+      "checksum": "",
+      "finished_at": null,
+      "migration_name": "0002_remove_difficulty",
+      "logs": [],
+      "started_at": null
+    },
+    {
+      "checksum": "",
+      "finished_at": null,
+      "migration_name": "0003_add_coloring_page_assets",
+      "logs": [],
+      "started_at": null
+    }
+  ]
+}
