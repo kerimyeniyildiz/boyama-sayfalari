@@ -332,6 +332,7 @@ export async function POST(request: Request) {
     metadata.tags.forEach((slug) => {
       revalidatePath(`/etiket/${slug}`);
     });
+    revalidatePath("/admin/pages");
 
     return NextResponse.json({ success: true, page });
   } catch (error) {

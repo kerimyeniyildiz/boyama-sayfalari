@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import type { AdminPageListResult } from "@/lib/data/admin/pages";
+import { AdminPageDeleteButton } from "@/components/admin/admin-page-delete-button";
 
 type AdminPageListProps = AdminPageListResult;
 
@@ -151,11 +152,7 @@ export function AdminPageList({ items, pagination, filters }: AdminPageListProps
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-2">
-                        <Button
-                          asChild
-                          size="sm"
-                          variant="outline"
-                        >
+                        <Button asChild size="sm" variant="outline">
                           <Link
                             href={`/admin/pages/${page.id}/edit` as Route}
                           >
@@ -163,10 +160,18 @@ export function AdminPageList({ items, pagination, filters }: AdminPageListProps
                           </Link>
                         </Button>
                         <Button asChild size="sm" variant="ghost">
-                          <Link href={`/sayfa/${page.slug}` as Route} target="_blank">
+                          <Link
+                            href={`/sayfa/${page.slug}` as Route}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
                             Görüntüle
                           </Link>
                         </Button>
+                        <AdminPageDeleteButton
+                          pageId={page.id}
+                          pageTitle={page.title}
+                        />
                       </div>
                     </td>
                   </tr>

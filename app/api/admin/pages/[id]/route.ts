@@ -350,6 +350,7 @@ export async function PUT(
     metadata.tags.forEach((slug) => {
       revalidatePath(`/etiket/${slug}`);
     });
+    revalidatePath("/admin/pages");
 
     return NextResponse.json({ success: true, page: updatedPage });
   } catch (error) {
@@ -363,4 +364,72 @@ export async function PUT(
       "Sayfa güncellenirken bir hata oluştu."
     );
   }
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: { id: string } }
+) {
+  const page = await prisma.coloringPage.findUnique({
+    where: { id: params.id },
+    include: {
+      categories: { include: { category: { select: { slug: true } } } },
+      tags: { include: { tag: { select: { slug: true } } } }
+    }
+  });
+
+  if (!page) {
+    return jsonError(404, "PAGE_NOT_FOUND", "Sayfa bulunamad��.");
+  }
+
+  const categorySlugs = new Set<string>(page.categories.map((entry) => entry.category.slug));
+  const tagSlugs = new Set<string>(page.tags.map((entry) => entry.tag.slug));
+
+  const keysToRemove = new Set<string>();
+  if (page.pdfKey) {
+    keysToRemove.add(page.pdfKey);
+  }
+  if (page.coverImageKey) {
+    keysToRemove.add(page.coverImageKey);
+  }
+  if (page.thumbWebpKey) {
+    keysToRemove.add(page.thumbWebpKey);
+    if (page.thumbWebpKey.includes("-800.")) {
+      keysToRemove.add(page.thumbWebpKey.replace("-800.", "-400."));
+    }
+  }
+
+  try {
+    await prisma.coloringPage.delete({
+      where: { id: params.id }
+    });
+  } catch (error) {
+    console.error("Sayfa silinemedi", error);
+    return jsonError(
+      500,
+      "PAGE_DELETE_FAILED",
+      "Sayfa silinirken bir hata olu�Ytu."
+    );
+  }
+
+  if (keysToRemove.size > 0) {
+    await Promise.all(
+      Array.from(keysToRemove).map((key) =>
+        deleteFromR2(key).catch(() => undefined)
+      )
+    );
+  }
+
+  revalidatePath("/");
+  revalidatePath("/ara");
+  revalidatePath(`/sayfa/${page.slug}`);
+  categorySlugs.forEach((slug) => {
+    revalidatePath(`/kategori/${slug}`);
+  });
+  tagSlugs.forEach((slug) => {
+    revalidatePath(`/etiket/${slug}`);
+  });
+  revalidatePath("/admin/pages");
+
+  return NextResponse.json({ success: true });
 }
