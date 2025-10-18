@@ -35,11 +35,14 @@ model ColoringPage {
   categories     ColoringPageCategory[]
   tags           ColoringPageTag[]
   downloadEvents DownloadEvent[]
-  assets         ColoringPageAsset[]
+  parent         ColoringPage? @relation("ColoringPageHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children       ColoringPage[] @relation("ColoringPageHierarchy")
+  parentId       String?
 
   @@index([status])
   @@index([createdAt])
   @@index([searchVector], type: Gin)
+  @@index([parentId])
 }
 
 model Category {
@@ -78,24 +81,6 @@ model ColoringPageTag {
   tagId  String
 
   @@id([pageId, tagId])
-}
-
-model ColoringPageAsset {
-  id             String        @id @default(uuid())
-  page           ColoringPage  @relation(fields: [pageId], references: [id], onDelete: Cascade)
-  pageId         String
-  pdfKey         String
-  coverImageKey  String
-  thumbLargeKey  String
-  thumbSmallKey  String
-  width          Int?
-  height         Int?
-  fileSizeBytes  Int?
-  position       Int           @default(0)
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-
-  @@index([pageId, position])
 }
 
 model AdminUser {

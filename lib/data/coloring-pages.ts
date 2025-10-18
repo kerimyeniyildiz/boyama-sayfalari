@@ -5,11 +5,37 @@ import { prisma } from "@/lib/db";
 
 const ONE_DAY_SECONDS = 60 * 60 * 24;
 
-export type ColoringPageWithRelations = Prisma.ColoringPageGetPayload<{
+export type ColoringPageSummary = Prisma.ColoringPageGetPayload<{
   include: {
     categories: { include: { category: true } };
     tags: { include: { tag: true } };
-    assets: true;
+  };
+}>;
+
+export type ColoringPageDetail = Prisma.ColoringPageGetPayload<{
+  include: {
+    categories: { include: { category: true } };
+    tags: { include: { tag: true } };
+    children: {
+      include: {
+        categories: { include: { category: true } };
+        tags: { include: { tag: true } };
+      };
+      orderBy: { createdAt: "asc" };
+    };
+    parent: {
+      include: {
+        categories: { include: { category: true } };
+        tags: { include: { tag: true } };
+        children: {
+          include: {
+            categories: { include: { category: true } };
+            tags: { include: { tag: true } };
+          };
+          orderBy: { createdAt: "asc" };
+        };
+      };
+    };
   };
 }>;
 
@@ -19,7 +45,7 @@ export type CategoryWithPageRelations = {
   slug: string;
   createdAt: Date;
   updatedAt: Date;
-  pages: ColoringPageWithRelations[];
+  pages: ColoringPageSummary[];
 };
 
 export type TagWithPageRelations = {
@@ -28,7 +54,7 @@ export type TagWithPageRelations = {
   slug: string;
   createdAt: Date;
   updatedAt: Date;
-  pages: ColoringPageWithRelations[];
+  pages: ColoringPageSummary[];
 };
 
 export type DownloadablePage = {
@@ -37,7 +63,6 @@ export type DownloadablePage = {
   title: string;
   pdfKey: string;
   downloads: number;
-  assets: Array<{ id: string; pdfKey: string }>;
 };
 
 function cacheResult<T>(keyParts: string[], fn: () => Promise<T>) {
@@ -48,20 +73,17 @@ function cacheResult<T>(keyParts: string[], fn: () => Promise<T>) {
 
 export async function getFeaturedPages(
   limit = 6
-): Promise<ColoringPageWithRelations[]> {
-  return cacheResult<ColoringPageWithRelations[]>(
+): Promise<ColoringPageSummary[]> {
+  return cacheResult<ColoringPageSummary[]>(
     ["coloring-pages", "featured", String(limit)],
     async () =>
       prisma.coloringPage.findMany({
-        where: { status: PageStatus.PUBLISHED },
+        where: { status: PageStatus.PUBLISHED, parentId: null },
         orderBy: [{ downloads: "desc" }, { createdAt: "desc" }],
         take: limit,
         include: {
           categories: { include: { category: true } },
-          tags: { include: { tag: true } },
-          assets: {
-            orderBy: { position: "asc" }
-          }
+          tags: { include: { tag: true } }
         }
       })
   );
@@ -69,20 +91,17 @@ export async function getFeaturedPages(
 
 export async function getRecentPages(
   limit = 12
-): Promise<ColoringPageWithRelations[]> {
-  return cacheResult<ColoringPageWithRelations[]>(
+): Promise<ColoringPageSummary[]> {
+  return cacheResult<ColoringPageSummary[]>(
     ["coloring-pages", "recent", String(limit)],
     async () =>
       prisma.coloringPage.findMany({
-        where: { status: PageStatus.PUBLISHED },
+        where: { status: PageStatus.PUBLISHED, parentId: null },
         orderBy: { createdAt: "desc" },
         take: limit,
         include: {
           categories: { include: { category: true } },
-          tags: { include: { tag: true } },
-          assets: {
-            orderBy: { position: "asc" }
-          }
+          tags: { include: { tag: true } }
         }
       })
   );
@@ -90,8 +109,8 @@ export async function getRecentPages(
 
 export async function getColoringPageBySlug(
   slug: string
-): Promise<ColoringPageWithRelations | null> {
-  return cacheResult<ColoringPageWithRelations | null>(
+): Promise<ColoringPageDetail | null> {
+  return cacheResult<ColoringPageDetail | null>(
     ["coloring-page", slug],
     async () =>
       prisma.coloringPage.findUnique({
@@ -99,8 +118,25 @@ export async function getColoringPageBySlug(
         include: {
           categories: { include: { category: true } },
           tags: { include: { tag: true } },
-          assets: {
-            orderBy: { position: "asc" }
+          children: {
+            include: {
+              categories: { include: { category: true } },
+              tags: { include: { tag: true } }
+            },
+            orderBy: { createdAt: "asc" }
+          },
+          parent: {
+            include: {
+              categories: { include: { category: true } },
+              tags: { include: { tag: true } },
+              children: {
+                include: {
+                  categories: { include: { category: true } },
+                  tags: { include: { tag: true } }
+                },
+                orderBy: { createdAt: "asc" }
+              }
+            }
           }
         }
       })
@@ -109,8 +145,8 @@ export async function getColoringPageBySlug(
 
 export async function getColoringPageById(
   id: string
-): Promise<ColoringPageWithRelations | null> {
-  return cacheResult<ColoringPageWithRelations | null>(
+): Promise<ColoringPageDetail | null> {
+  return cacheResult<ColoringPageDetail | null>(
     ["coloring-page-id", id],
     async () =>
       prisma.coloringPage.findUnique({
@@ -118,8 +154,25 @@ export async function getColoringPageById(
         include: {
           categories: { include: { category: true } },
           tags: { include: { tag: true } },
-          assets: {
-            orderBy: { position: "asc" }
+          children: {
+            include: {
+              categories: { include: { category: true } },
+              tags: { include: { tag: true } }
+            },
+            orderBy: { createdAt: "asc" }
+          },
+          parent: {
+            include: {
+              categories: { include: { category: true } },
+              tags: { include: { tag: true } },
+              children: {
+                include: {
+                  categories: { include: { category: true } },
+                  tags: { include: { tag: true } }
+                },
+                orderBy: { createdAt: "asc" }
+              }
+            }
           }
         }
       })
@@ -131,7 +184,7 @@ export async function getRelatedPages(
   categorySlugs: string[],
   tagSlugs: string[],
   limit = 6
-): Promise<ColoringPageWithRelations[]> {
+) {
   const keyParts = [
     "coloring-pages-related",
     slug,
@@ -140,7 +193,7 @@ export async function getRelatedPages(
     String(limit)
   ];
 
-  return cacheResult<ColoringPageWithRelations[]>(keyParts, async () => {
+  return cacheResult(keyParts, async () => {
     const orConditions: Prisma.ColoringPageWhereInput[] = [];
 
     if (categorySlugs.length > 0) {
@@ -161,7 +214,8 @@ export async function getRelatedPages(
 
     const where: Prisma.ColoringPageWhereInput = {
       slug: { not: slug },
-      status: PageStatus.PUBLISHED
+      status: PageStatus.PUBLISHED,
+      parentId: null
     };
 
     if (orConditions.length > 0) {
@@ -172,10 +226,7 @@ export async function getRelatedPages(
       where,
       include: {
         categories: { include: { category: true } },
-        tags: { include: { tag: true } },
-        assets: {
-          orderBy: { position: "asc" }
-        }
+        tags: { include: { tag: true } }
       },
       take: limit,
       orderBy: [{ downloads: "desc" }, { createdAt: "desc" }]
@@ -203,7 +254,7 @@ export async function getCategoriesWithCounts() {
   }));
 }
 
-export async function getTagsWithCounts(limit = 20) {
+export async function getTagsWithCounts(limit = 50) {
   const tags = await cacheResult(
     ["tags-with-counts", String(limit)],
     async () =>
@@ -224,29 +275,19 @@ export async function getTagsWithCounts(limit = 20) {
   }));
 }
 
-export async function getAllCategorySlugs() {
-  const categories = await cacheResult(
-    ["category-slugs"],
-    async () =>
-      prisma.category.findMany({
-        select: { slug: true }
-      })
-  );
-  return categories.map((category) => category.slug);
+export async function getCategorySlugs() {
+  return prisma.category.findMany({
+    select: { slug: true }
+  });
 }
 
-export async function getAllTagSlugs() {
-  const tags = await cacheResult(
-    ["tag-slugs"],
-    async () =>
-      prisma.tag.findMany({
-        select: { slug: true }
-      })
-  );
-  return tags.map((tag) => tag.slug);
+export async function getTagSlugs() {
+  return prisma.tag.findMany({
+    select: { slug: true }
+  });
 }
 
-export async function getAllPublishedSlugs() {
+export async function getColoringPageSlugs() {
   const pages = await cacheResult(
     ["coloring-page-slugs"],
     async () =>
@@ -260,8 +301,8 @@ export async function getAllPublishedSlugs() {
 
 export async function getPagesByCategorySlug(
   slug: string
-): Promise<ColoringPageWithRelations[]> {
-  return cacheResult<ColoringPageWithRelations[]>(
+): Promise<ColoringPageSummary[]> {
+  return cacheResult<ColoringPageSummary[]>(
     ["coloring-pages-category", slug],
     async () =>
       prisma.coloringPage.findMany({
@@ -272,10 +313,7 @@ export async function getPagesByCategorySlug(
         orderBy: { createdAt: "desc" },
         include: {
           categories: { include: { category: true } },
-          tags: { include: { tag: true } },
-          assets: {
-            orderBy: { position: "asc" }
-          }
+          tags: { include: { tag: true } }
         }
       })
   );
@@ -283,8 +321,8 @@ export async function getPagesByCategorySlug(
 
 export async function getPagesByTagSlug(
   slug: string
-): Promise<ColoringPageWithRelations[]> {
-  return cacheResult<ColoringPageWithRelations[]>(
+): Promise<ColoringPageSummary[]> {
+  return cacheResult<ColoringPageSummary[]>(
     ["coloring-pages-tag", slug],
     async () =>
       prisma.coloringPage.findMany({
@@ -295,18 +333,13 @@ export async function getPagesByTagSlug(
         orderBy: { createdAt: "desc" },
         include: {
           categories: { include: { category: true } },
-          tags: { include: { tag: true } },
-          assets: {
-            orderBy: { position: "asc" }
-          }
+          tags: { include: { tag: true } }
         }
       })
   );
 }
 
-export async function getCategoryWithPages(
-  slug: string
-): Promise<CategoryWithPageRelations | null> {
+export async function getCategoryWithPages(slug: string) {
   const category = await cacheResult(
     ["category-with-pages", slug],
     async () =>
@@ -318,10 +351,7 @@ export async function getCategoryWithPages(
               page: {
                 include: {
                   categories: { include: { category: true } },
-                  tags: { include: { tag: true } },
-                  assets: {
-                    orderBy: { position: "asc" }
-                  }
+                  tags: { include: { tag: true } }
                 }
               }
             },
@@ -335,17 +365,13 @@ export async function getCategoryWithPages(
     return null;
   }
 
-  const { pages: pageRelations, ...rest } = category;
-
   return {
-    ...(rest as CategoryWithPageRelations),
-    pages: pageRelations.map((relation) => relation.page)
+    ...category,
+    pages: category.pages.map((relation) => relation.page)
   };
 }
 
-export async function getTagWithPages(
-  slug: string
-): Promise<TagWithPageRelations | null> {
+export async function getTagWithPages(slug: string) {
   const tag = await cacheResult(
     ["tag-with-pages", slug],
     async () =>
@@ -357,10 +383,7 @@ export async function getTagWithPages(
               page: {
                 include: {
                   categories: { include: { category: true } },
-                  tags: { include: { tag: true } },
-                  assets: {
-                    orderBy: { position: "asc" }
-                  }
+                  tags: { include: { tag: true } }
                 }
               }
             },
@@ -374,36 +397,23 @@ export async function getTagWithPages(
     return null;
   }
 
-  const { pages: pageRelations, ...rest } = tag;
-
   return {
-    ...(rest as TagWithPageRelations),
-    pages: pageRelations.map((relation) => relation.page)
+    ...tag,
+    pages: tag.pages.map((relation) => relation.page)
   };
 }
 
-export async function getDownloadablePage(
-  slug: string
-): Promise<DownloadablePage | null> {
-  const result = await prisma.coloringPage.findUnique({
+export async function getDownloadablePage(slug: string) {
+  return prisma.coloringPage.findUnique({
     where: { slug, status: PageStatus.PUBLISHED },
     select: {
       id: true,
       slug: true,
       title: true,
       pdfKey: true,
-      downloads: true,
-      assets: {
-        orderBy: { position: "asc" },
-        select: {
-          id: true,
-          pdfKey: true
-        }
-      }
+      downloads: true
     }
   });
-
-  return result as DownloadablePage | null;
 }
 
 export async function incrementDownloads(pageId: string) {

@@ -8,6 +8,12 @@ import { pageMetadataSchema } from "@/lib/validation";
 import { slugify } from "@/lib/slug";
 import { generateImageAssets, generatePdfFromImage, getBufferSize } from "@/lib/images";
 import { uploadToR2, deleteFromR2 } from "@/lib/r2";
+
+const slugifyTr = (value: string) =>
+  (slugify as unknown as (input: string, options?: any) => string)(value, {
+    lower: true,
+    locale: "tr"
+  });
 import {
   getAdminPages,
   parseAdminPageListFilters
@@ -74,6 +80,101 @@ function collectStrings(values: FormDataEntryValue[]): string[] {
     .filter((value): value is string => typeof value === "string")
     .map((value) => value.trim())
     .filter((value) => value.length > 0);
+}
+
+function deriveSlugFromFile(file: File) {
+  const withoutExtension = file.name.replace(/\.[^/.]+$/, "");
+  return slugifyTr(withoutExtension);
+}
+
+function humanizeSlug(slug: string) {
+  return slug
+    .split("-")
+    .map((word) => {
+      if (word.length === 0) {
+        return word;
+      }
+      const first = word[0].toLocaleUpperCase("tr-TR");
+      const rest = word.slice(1).toLocaleLowerCase("tr-TR");
+      return `${first}${rest}`;
+    })
+    .join(" ");
+}
+
+async function ensureUniqueSlug(baseSlug: string, used: Set<string>) {
+  let candidate = baseSlug.length > 0 ? baseSlug : slugifyTr(Date.now().toString());
+  let counter = 2;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    if (!used.has(candidate)) {
+      const existing = await prisma.coloringPage.findUnique({
+        where: { slug: candidate },
+        select: { id: true }
+      });
+      if (!existing) {
+        used.add(candidate);
+        return candidate;
+      }
+    }
+    candidate = slugifyTr(`${baseSlug}-${counter}`);
+    counter += 1;
+  }
+}
+
+async function uploadPageAssets(
+  file: File,
+  slug: string,
+  uploadedKeys: string[]
+) {
+  const imageBuffer = Buffer.from(await file.arrayBuffer());
+  const pdfBuffer = await generatePdfFromImage(imageBuffer);
+  const assets = await generateImageAssets(imageBuffer);
+
+  const pdfKey = `pdf/${slug}.pdf`;
+  const coverKey = `cover/${slug}.webp`;
+  const thumbLargeKey = `thumb/${slug}-800.webp`;
+  const thumbSmallKey = `thumb/${slug}-400.webp`;
+
+  await uploadToR2({
+    key: pdfKey,
+    body: pdfBuffer,
+    contentType: "application/pdf",
+    cacheControl: PDF_CACHE_CONTROL
+  });
+  uploadedKeys.push(pdfKey);
+
+  await uploadToR2({
+    key: coverKey,
+    body: assets.cover,
+    contentType: "image/webp",
+    cacheControl: IMAGE_CACHE_CONTROL
+  });
+  uploadedKeys.push(coverKey);
+
+  await uploadToR2({
+    key: thumbSmallKey,
+    body: assets.thumbSmall,
+    contentType: "image/webp",
+    cacheControl: IMAGE_CACHE_CONTROL
+  });
+  uploadedKeys.push(thumbSmallKey);
+
+  await uploadToR2({
+    key: thumbLargeKey,
+    body: assets.thumbLarge,
+    contentType: "image/webp",
+    cacheControl: IMAGE_CACHE_CONTROL
+  });
+  uploadedKeys.push(thumbLargeKey);
+
+  return {
+    pdfKey,
+    coverKey,
+    thumbLargeKey,
+    width: assets.width,
+    height: assets.height,
+    fileSizeBytes: getBufferSize(pdfBuffer)
+  };
 }
 
 export async function GET(request: Request) {
@@ -158,7 +259,7 @@ export async function POST(request: Request) {
 
   const metadataInput = {
     title,
-    slug: rawSlug ? slugify(rawSlug) : slugify(title),
+    slug: rawSlug ? slugifyTr(rawSlug) : slugifyTr(title),
     categories: submittedCategories,
     tags: submittedTags
   };
@@ -176,141 +277,39 @@ export async function POST(request: Request) {
 
   const metadata = parsed.data;
 
-  const imageBuffer = Buffer.from(await rawImage.arrayBuffer());
-  const pdfBuffer = await generatePdfFromImage(imageBuffer);
-  const assets = await generateImageAssets(imageBuffer);
-
-  const pdfKey = `pdf/${metadata.slug}.pdf`;
-  const coverKey = `cover/${metadata.slug}.webp`;
-  const thumbKeyLarge = `thumb/${metadata.slug}-800.webp`;
-  const thumbKeySmall = `thumb/${metadata.slug}-400.webp`;
+  const [categories, tags] = await Promise.all([
+    prisma.category.findMany({
+      where: { slug: { in: metadata.categories } },
+      select: { id: true }
+    }),
+    prisma.tag.findMany({
+      where: { slug: { in: metadata.tags } },
+      select: { id: true }
+    })
+  ]);
 
   const uploadedKeys: string[] = [];
-  const extraAssetRecords: Array<{
-    pdfKey: string;
-    coverImageKey: string;
-    thumbLargeKey: string;
-    thumbSmallKey: string;
-    width: number;
-    height: number;
-    fileSizeBytes: number;
-    position: number;
-  }> = [];
+  const createdSlugs: string[] = [];
+  const usedSlugs = new Set<string>();
 
   try {
-    await uploadToR2({
-      key: pdfKey,
-      body: pdfBuffer,
-      contentType: "application/pdf",
-      cacheControl: PDF_CACHE_CONTROL
-    });
-    uploadedKeys.push(pdfKey);
+    const parentSlug = await ensureUniqueSlug(metadata.slug, usedSlugs);
+    const parentAssets = await uploadPageAssets(rawImage, parentSlug, uploadedKeys);
 
-    await uploadToR2({
-      key: coverKey,
-      body: assets.cover,
-      contentType: "image/webp",
-      cacheControl: IMAGE_CACHE_CONTROL
-    });
-    uploadedKeys.push(coverKey);
-
-    await uploadToR2({
-      key: thumbKeySmall,
-      body: assets.thumbSmall,
-      contentType: "image/webp",
-      cacheControl: IMAGE_CACHE_CONTROL
-    });
-    uploadedKeys.push(thumbKeySmall);
-
-    await uploadToR2({
-      key: thumbKeyLarge,
-      body: assets.thumbLarge,
-      contentType: "image/webp",
-      cacheControl: IMAGE_CACHE_CONTROL
-    });
-    uploadedKeys.push(thumbKeyLarge);
-
-    for (let index = 0; index < extraImages.length; index += 1) {
-      const file = extraImages[index];
-      const extraBuffer = Buffer.from(await file.arrayBuffer());
-      const extraPdfBuffer = await generatePdfFromImage(extraBuffer);
-      const extraAssets = await generateImageAssets(extraBuffer);
-
-      const suffix = index + 2;
-      const extraPdfKey = `pdf/${metadata.slug}-${suffix}.pdf`;
-      const extraCoverKey = `cover/${metadata.slug}-${suffix}.webp`;
-      const extraThumbSmallKey = `thumb/${metadata.slug}-${suffix}-400.webp`;
-      const extraThumbLargeKey = `thumb/${metadata.slug}-${suffix}-800.webp`;
-
-      await uploadToR2({
-        key: extraPdfKey,
-        body: extraPdfBuffer,
-        contentType: "application/pdf",
-        cacheControl: PDF_CACHE_CONTROL
-      });
-      uploadedKeys.push(extraPdfKey);
-
-      await uploadToR2({
-        key: extraCoverKey,
-        body: extraAssets.cover,
-        contentType: "image/webp",
-        cacheControl: IMAGE_CACHE_CONTROL
-      });
-      uploadedKeys.push(extraCoverKey);
-
-      await uploadToR2({
-        key: extraThumbSmallKey,
-        body: extraAssets.thumbSmall,
-        contentType: "image/webp",
-        cacheControl: IMAGE_CACHE_CONTROL
-      });
-      uploadedKeys.push(extraThumbSmallKey);
-
-      await uploadToR2({
-        key: extraThumbLargeKey,
-        body: extraAssets.thumbLarge,
-        contentType: "image/webp",
-        cacheControl: IMAGE_CACHE_CONTROL
-      });
-      uploadedKeys.push(extraThumbLargeKey);
-
-      extraAssetRecords.push({
-        pdfKey: extraPdfKey,
-        coverImageKey: extraCoverKey,
-        thumbLargeKey: extraThumbLargeKey,
-        thumbSmallKey: extraThumbSmallKey,
-        width: extraAssets.width,
-        height: extraAssets.height,
-        fileSizeBytes: getBufferSize(extraPdfBuffer),
-        position: index + 1
-      });
-    }
-
-    const [categories, tags] = await Promise.all([
-      prisma.category.findMany({
-        where: { slug: { in: metadata.categories } },
-        select: { id: true }
-      }),
-      prisma.tag.findMany({
-        where: { slug: { in: metadata.tags } },
-        select: { id: true }
-      })
-    ]);
-
-    const page = await prisma.coloringPage.create({
+    const parentPage = await prisma.coloringPage.create({
       data: {
-        slug: metadata.slug,
+        slug: parentSlug,
         title: metadata.title,
         description: `${metadata.title} boyama sayfası.`,
         orientation: "PORTRAIT",
         status: PageStatus.PUBLISHED,
         language: "tr",
-        pdfKey,
-        coverImageKey: coverKey,
-        thumbWebpKey: thumbKeyLarge,
-        width: assets.width,
-        height: assets.height,
-        fileSizeBytes: getBufferSize(pdfBuffer),
+        pdfKey: parentAssets.pdfKey,
+        coverImageKey: parentAssets.coverKey,
+        thumbWebpKey: parentAssets.thumbLargeKey,
+        width: parentAssets.width,
+        height: parentAssets.height,
+        fileSizeBytes: parentAssets.fileSizeBytes,
         categories: {
           create: categories.map((category) => ({
             category: { connect: { id: category.id } }
@@ -320,18 +319,56 @@ export async function POST(request: Request) {
           create: tags.map((tag) => ({
             tag: { connect: { id: tag.id } }
           }))
-        },
-        assets: {
-          create: extraAssetRecords
         }
       }
     });
 
+    createdSlugs.push(parentSlug);
+
+    for (const file of extraImages) {
+      const baseSlug = deriveSlugFromFile(file);
+      const slug = await ensureUniqueSlug(baseSlug, usedSlugs);
+      const titleFromSlug = humanizeSlug(slug);
+      const childAssets = await uploadPageAssets(file, slug, uploadedKeys);
+
+      await prisma.coloringPage.create({
+        data: {
+          slug,
+          title: titleFromSlug,
+          description: `${titleFromSlug} boyama sayfası.`,
+          orientation: "PORTRAIT",
+          status: PageStatus.PUBLISHED,
+          language: "tr",
+          pdfKey: childAssets.pdfKey,
+          coverImageKey: childAssets.coverKey,
+          thumbWebpKey: childAssets.thumbLargeKey,
+          width: childAssets.width,
+          height: childAssets.height,
+          fileSizeBytes: childAssets.fileSizeBytes,
+          parent: { connect: { id: parentPage.id } },
+          categories: {
+            create: categories.map((category) => ({
+              category: { connect: { id: category.id } }
+            }))
+          },
+          tags: {
+            create: tags.map((tag) => ({
+              tag: { connect: { id: tag.id } }
+            }))
+          }
+        }
+      });
+
+      createdSlugs.push(slug);
+    }
+
     revalidatePath("/");
-    revalidatePath(`/sayfa/${page.slug}`);
     revalidatePath("/ara");
     revalidatePath("/admin/pages");
-    revalidatePath("/admin/pages/new");
+    revalidatePath(`/sayfa/${parentSlug}`);
+    createdSlugs.slice(1).forEach((slug) => {
+      revalidatePath(`/sayfa/${slug}`);
+    });
     metadata.categories.forEach((slug) => {
       revalidatePath(`/kategori/${slug}`);
     });
@@ -339,7 +376,7 @@ export async function POST(request: Request) {
       revalidatePath(`/etiket/${slug}`);
     });
 
-    return NextResponse.json({ success: true, page });
+    return NextResponse.json({ success: true, slug: parentSlug });
   } catch (error) {
     await Promise.all(
       uploadedKeys.map((key) => deleteFromR2(key).catch(() => undefined))
@@ -352,4 +389,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

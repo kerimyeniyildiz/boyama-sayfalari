@@ -1,83 +1,61 @@
 import Image from "next/image";
 import Link from "next/link";
-import type {
-  ColoringPage,
-  ColoringPageAsset,
-  ColoringPageCategory,
-  ColoringPageTag
-} from "@prisma/client";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { FALLBACK_BLUR_DATA_URL } from "@/lib/placeholders";
 import { getPublicUrl } from "@/lib/r2";
 import { cn } from "@/lib/utils";
-
-type ColoringPageWithRelations = ColoringPage & {
-  categories: Array<
-    ColoringPageCategory & {
-      category: { id: string; name: string; slug: string };
-    }
-  >;
-  tags: Array<
-    ColoringPageTag & {
-      tag: { id: string; name: string; slug: string };
-    }
-  >;
-  assets: Array<ColoringPageAsset>;
-};
+import type { ColoringPageSummary } from "@/lib/data/coloring-pages";
 
 type ColoringPageCardProps = {
-  page: ColoringPageWithRelations;
+  page: ColoringPageSummary;
   priority?: boolean;
   className?: string;
 };
+
+function getThumbUrls(page: ColoringPageSummary) {
+  if (page.thumbWebpKey) {
+    const large = getPublicUrl(page.thumbWebpKey);
+    const small = page.thumbWebpKey.includes("-800.")
+      ? getPublicUrl(page.thumbWebpKey.replace("-800.", "-400."))
+      : null;
+    return { large, small };
+  }
+
+  if (page.coverImageKey) {
+    const url = getPublicUrl(page.coverImageKey);
+    return { large: url, small: url };
+  }
+
+  return {
+    large: FALLBACK_BLUR_DATA_URL,
+    small: FALLBACK_BLUR_DATA_URL
+  };
+}
 
 export function ColoringPageCard({
   page,
   priority,
   className
 }: ColoringPageCardProps) {
-  const sortedAssets = page.assets
-    .slice()
-    .sort((a, b) => a.position - b.position);
-  const fallbackAsset = sortedAssets[0];
-
-  const rawThumbLargeKey =
-    page.thumbWebpKey ||
-    fallbackAsset?.thumbLargeKey ||
-    fallbackAsset?.coverImageKey ||
-    null;
-
-  let rawThumbSmallKey: string | null = null;
-  if (page.thumbWebpKey && page.thumbWebpKey.includes("-800.")) {
-    rawThumbSmallKey = page.thumbWebpKey.replace("-800.", "-400.");
-  } else if (fallbackAsset?.thumbSmallKey) {
-    rawThumbSmallKey = fallbackAsset.thumbSmallKey;
-  }
-
-  const hasThumbKey = Boolean(rawThumbLargeKey);
-  const thumbLargeUrl = hasThumbKey
-    ? getPublicUrl(rawThumbLargeKey!)
-    : FALLBACK_BLUR_DATA_URL;
-  const blurDataURL = rawThumbSmallKey
-    ? getPublicUrl(rawThumbSmallKey)
-    : FALLBACK_BLUR_DATA_URL;
+  const { large, small } = getThumbUrls(page);
+  const hasOptimized = large !== FALLBACK_BLUR_DATA_URL;
 
   return (
     <Card className={cn("h-full overflow-hidden", className)}>
       <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-brand-light">
         <Link href={`/sayfa/${page.slug}`}>
           <Image
-            src={thumbLargeUrl}
+            src={large}
             alt={page.title}
             fill
             sizes="(max-width: 768px) 100vw, 33vw"
             className="object-cover transition-transform duration-500 hover:scale-105"
             priority={priority}
             placeholder="blur"
-            blurDataURL={blurDataURL}
-            unoptimized={!hasThumbKey}
+            blurDataURL={small ?? FALLBACK_BLUR_DATA_URL}
+            unoptimized={!hasOptimized}
           />
         </Link>
         <div className="absolute bottom-4 left-4 flex items-center gap-2">

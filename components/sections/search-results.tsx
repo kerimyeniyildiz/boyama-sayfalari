@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { ColoringPageCard } from "@/components/cards/coloring-page-card";
-import type { ColoringPageWithRelations } from "@/lib/data/coloring-pages";
+import type { ColoringPageSummary } from "@/lib/data/coloring-pages";
 
 type Category = {
   id: string;
@@ -32,7 +32,7 @@ type Filters = {
 };
 
 type SearchResult = {
-  results: ColoringPageWithRelations[];
+  results: ColoringPageSummary[];
   total: number;
   page: number;
   pageSize: number;

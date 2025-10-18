@@ -1,6 +1,7 @@
 import { PageStatus, Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
+import type { ColoringPageSummary } from "@/lib/data/coloring-pages";
 
 export type SearchFilters = {
   q?: string;
@@ -102,10 +103,7 @@ export async function searchColoringPages(filters: SearchFilters) {
     where: { id: { in: ids } },
     include: {
       categories: { include: { category: true } },
-      tags: { include: { tag: true } },
-      assets: {
-        orderBy: { position: "asc" }
-      }
+      tags: { include: { tag: true } }
     }
   });
 
@@ -115,7 +113,7 @@ export async function searchColoringPages(filters: SearchFilters) {
     .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
 
   return {
-    results: sorted,
+    results: sorted as ColoringPageSummary[],
     total,
     page,
     pageSize

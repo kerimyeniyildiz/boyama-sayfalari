@@ -1,8 +1,8 @@
 import { ColoringPageCard } from "@/components/cards/coloring-page-card";
-import type { ColoringPageWithRelations } from "@/lib/data/coloring-pages";
+import type { ColoringPageSummary } from "@/lib/data/coloring-pages";
 
 type LatestSectionProps = {
-  pages: ColoringPageWithRelations[];
+  pages: ColoringPageSummary[];
 };
 
 export function LatestSection({ pages }: LatestSectionProps) {

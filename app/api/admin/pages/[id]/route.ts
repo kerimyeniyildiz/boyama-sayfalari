@@ -7,6 +7,12 @@ import { slugify } from "@/lib/slug";
 import { generateImageAssets, generatePdfFromImage, getBufferSize } from "@/lib/images";
 import { uploadToR2, deleteFromR2 } from "@/lib/r2";
 
+const slugifyTr = (value: string) =>
+  (slugify as unknown as (input: string, options?: any) => string)(value, {
+    lower: true,
+    locale: "tr"
+  });
+
 const IMAGE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 const PDF_CACHE_CONTROL = "public, max-age=31536000, immutable";
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
@@ -64,6 +70,73 @@ function toString(value: FormDataEntryValue | null): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+async function uploadPageAssets(
+  file: File,
+  slug: string,
+  uploadedKeys: string[]
+) {
+  const imageBuffer = Buffer.from(await file.arrayBuffer());
+  const pdfBuffer = await generatePdfFromImage(imageBuffer);
+  const assets = await generateImageAssets(imageBuffer);
+
+  const pdfKey = `pdf/${slug}.pdf`;
+  const coverKey = `cover/${slug}.webp`;
+  const thumbLargeKey = `thumb/${slug}-800.webp`;
+  const thumbSmallKey = `thumb/${slug}-400.webp`;
+
+  await uploadToR2({
+    key: pdfKey,
+    body: pdfBuffer,
+    contentType: "application/pdf",
+    cacheControl: PDF_CACHE_CONTROL
+  });
+  uploadedKeys.push(pdfKey);
+
+  await uploadToR2({
+    key: coverKey,
+    body: assets.cover,
+    contentType: "image/webp",
+    cacheControl: IMAGE_CACHE_CONTROL
+  });
+  uploadedKeys.push(coverKey);
+
+  await uploadToR2({
+    key: thumbSmallKey,
+    body: assets.thumbSmall,
+    contentType: "image/webp",
+    cacheControl: IMAGE_CACHE_CONTROL
+  });
+  uploadedKeys.push(thumbSmallKey);
+
+  await uploadToR2({
+    key: thumbLargeKey,
+    body: assets.thumbLarge,
+    contentType: "image/webp",
+    cacheControl: IMAGE_CACHE_CONTROL
+  });
+  uploadedKeys.push(thumbLargeKey);
+
+  return {
+    pdfKey,
+    coverKey,
+    thumbLargeKey,
+    width: assets.width,
+    height: assets.height,
+    fileSizeBytes: getBufferSize(pdfBuffer)
+  };
+}
+
+async function isSlugTaken(slug: string, excludeId?: string) {
+  const existing = await prisma.coloringPage.findFirst({
+    where: {
+      slug,
+      NOT: excludeId ? { id: excludeId } : undefined
+    },
+    select: { id: true }
+  });
+  return Boolean(existing);
+}
+
 export async function PUT(
   request: Request,
   { params }: { params: { id: string } }
@@ -74,9 +147,7 @@ export async function PUT(
     include: {
       categories: { include: { category: true } },
       tags: { include: { tag: true } },
-      assets: {
-        orderBy: { position: "asc" }
-      }
+      parent: { select: { slug: true } }
     }
   });
 
@@ -87,18 +158,33 @@ export async function PUT(
   const imageFile = (formData.get("image") ?? formData.get("cover")) as
     | File
     | null;
-  const extraImages = formData
-    .getAll("images")
-    .filter((value): value is File => value instanceof File && value.size > 0);
+
+  if (imageFile) {
+    if (!ALLOWED_IMAGE_TYPES.has(imageFile.type)) {
+      return jsonFieldError(
+        400,
+        "INVALID_IMAGE_TYPE",
+        "Görsel yalnızca PNG, JPEG, SVG veya WebP formatında olabilir."
+      );
+    }
+
+    if (imageFile.size > MAX_IMAGE_SIZE) {
+      return jsonFieldError(
+        400,
+        "IMAGE_TOO_LARGE",
+        `Görsel ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sınırını aşıyor.`
+      );
+    }
+  }
 
   const title = toString(formData.get("title")) || existingPage.title;
-  const rawSlug = toString(formData.get("slug"));
+  const rawSlug = toString(formData.get("slug")) || existingPage.slug;
   const submittedCategories = collectStrings(formData.getAll("categories"));
   const submittedTags = collectStrings(formData.getAll("tags"));
 
   const metadataInput = {
     title,
-    slug: rawSlug ? slugify(rawSlug) : existingPage.slug,
+    slug: slugifyTr(rawSlug),
     categories:
       submittedCategories.length > 0
         ? submittedCategories
@@ -122,200 +208,43 @@ export async function PUT(
   const metadata = parsed.data;
   const slugChanged = metadata.slug !== existingPage.slug;
 
-  if (slugChanged && !(imageFile instanceof File && imageFile.size > 0)) {
-    return jsonFieldError(
-      400,
-      "IMAGE_REQUIRED_FOR_SLUG_CHANGE",
-      "Slug değiştirildiğinde görselin yeniden yüklenmesi gerekir.",
-      {
-        image: ["Slug değiştirildiğinde görselin yeniden yüklenmesi gerekir."]
-      }
-    );
-  }
-
-  for (const image of extraImages) {
-    if (!ALLOWED_IMAGE_TYPES.has(image.type)) {
+  if (slugChanged) {
+    const taken = await isSlugTaken(metadata.slug, existingPage.id);
+    if (taken) {
       return jsonFieldError(
         400,
-        "INVALID_IMAGE_TYPE",
-        "Görsel yalnızca PNG, JPEG, SVG veya WebP formatında olabilir.",
-        {
-          image: ["Görsel yalnızca PNG, JPEG, SVG veya WebP formatında olabilir."]
-        }
-      );
-    }
-
-    if (image.size > MAX_IMAGE_SIZE) {
-      return jsonFieldError(
-        400,
-        "IMAGE_TOO_LARGE",
-        `Görsel ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sınırını aşıyor.`,
-        {
-          image: [`Görsel ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sınırını aşıyor.`]
-        }
+        "SLUG_IN_USE",
+        "Bu slug başka bir sayfada kullanılıyor.",
+        { slug: ["Bu slug başka bir sayfada kullanılıyor."] }
       );
     }
   }
-
-  const existingAssetCount = existingPage.assets.length;
-
-  let newPdfBuffer: Buffer | null = null;
-  let newAssets: Awaited<ReturnType<typeof generateImageAssets>> | null = null;
-
-  if (imageFile instanceof File && imageFile.size > 0) {
-    if (!ALLOWED_IMAGE_TYPES.has(imageFile.type)) {
-      return jsonFieldError(
-        400,
-        "INVALID_IMAGE_TYPE",
-        "Görsel yalnızca PNG, JPEG, SVG veya WebP formatında olabilir.",
-        {
-          image: ["Görsel yalnızca PNG, JPEG, SVG veya WebP formatında olabilir."]
-        }
-      );
-    }
-
-    if (imageFile.size > MAX_IMAGE_SIZE) {
-      return jsonFieldError(
-        400,
-        "IMAGE_TOO_LARGE",
-        `Görsel ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sınırını aşıyor.`,
-        {
-          image: [`Görsel ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sınırını aşıyor.`]
-        }
-      );
-    }
-
-    const imageBuffer = Buffer.from(await imageFile.arrayBuffer());
-    newPdfBuffer = await generatePdfFromImage(imageBuffer);
-    newAssets = await generateImageAssets(imageBuffer);
-  }
-
-  const pdfKey = newPdfBuffer
-    ? `pdf/${metadata.slug}.pdf`
-    : existingPage.pdfKey;
-  const coverKey = newPdfBuffer
-    ? `cover/${metadata.slug}.webp`
-    : existingPage.coverImageKey;
-  const thumbKeyLarge = newPdfBuffer
-    ? `thumb/${metadata.slug}-800.webp`
-    : existingPage.thumbWebpKey;
-  const thumbKeySmall = newPdfBuffer
-    ? `thumb/${metadata.slug}-400.webp`
-    : existingPage.thumbWebpKey.replace("-800.webp", "-400.webp");
 
   const uploadedKeys: string[] = [];
   const keysToDelete: string[] = [];
-  const extraAssetRecords: Array<
-    {
+
+  try {
+    let assetInfo: {
       pdfKey: string;
-      coverImageKey: string;
+      coverKey: string;
       thumbLargeKey: string;
-      thumbSmallKey: string;
       width: number;
       height: number;
       fileSizeBytes: number;
-      position: number;
+    } | null = null;
+
+    if (imageFile instanceof File) {
+      assetInfo = await uploadPageAssets(imageFile, metadata.slug, uploadedKeys);
+      if (existingPage.pdfKey) keysToDelete.push(existingPage.pdfKey);
+      if (existingPage.coverImageKey) keysToDelete.push(existingPage.coverImageKey);
+      if (existingPage.thumbWebpKey) {
+        keysToDelete.push(existingPage.thumbWebpKey);
+        if (existingPage.thumbWebpKey.includes("-800.")) {
+          keysToDelete.push(existingPage.thumbWebpKey.replace("-800.", "-400."));
+        }
+      }
     }
-  > = [];
 
-  if (newPdfBuffer && newAssets) {
-    keysToDelete.push(
-      existingPage.pdfKey,
-      existingPage.coverImageKey,
-      existingPage.thumbWebpKey,
-      existingPage.thumbWebpKey.replace('-800.webp', '-400.webp')
-    );
-
-    await uploadToR2({
-      key: pdfKey,
-      body: newPdfBuffer,
-      contentType: 'application/pdf',
-      cacheControl: PDF_CACHE_CONTROL
-    });
-    uploadedKeys.push(pdfKey);
-
-    await uploadToR2({
-      key: coverKey,
-      body: newAssets.cover,
-      contentType: 'image/webp',
-      cacheControl: IMAGE_CACHE_CONTROL
-    });
-    uploadedKeys.push(coverKey);
-
-    await uploadToR2({
-      key: thumbKeySmall,
-      body: newAssets.thumbSmall,
-      contentType: 'image/webp',
-      cacheControl: IMAGE_CACHE_CONTROL
-    });
-    uploadedKeys.push(thumbKeySmall);
-
-    await uploadToR2({
-      key: thumbKeyLarge,
-      body: newAssets.thumbLarge,
-      contentType: 'image/webp',
-      cacheControl: IMAGE_CACHE_CONTROL
-    });
-    uploadedKeys.push(thumbKeyLarge);
-  }
-
-  for (let index = 0; index < extraImages.length; index += 1) {
-    const file = extraImages[index];
-    const extraBuffer = Buffer.from(await file.arrayBuffer());
-    const extraPdfBuffer = await generatePdfFromImage(extraBuffer);
-    const extraAssets = await generateImageAssets(extraBuffer);
-
-    const suffix = existingAssetCount + index + 2;
-    const extraPdfKey = 'pdf/' + metadata.slug + '-' + suffix + '.pdf';
-    const extraCoverKey = 'cover/' + metadata.slug + '-' + suffix + '.webp';
-    const extraThumbSmallKey = 'thumb/' + metadata.slug + '-' + suffix + '-400.webp';
-    const extraThumbLargeKey = 'thumb/' + metadata.slug + '-' + suffix + '-800.webp';
-
-    await uploadToR2({
-      key: extraPdfKey,
-      body: extraPdfBuffer,
-      contentType: 'application/pdf',
-      cacheControl: PDF_CACHE_CONTROL
-    });
-    uploadedKeys.push(extraPdfKey);
-
-    await uploadToR2({
-      key: extraCoverKey,
-      body: extraAssets.cover,
-      contentType: 'image/webp',
-      cacheControl: IMAGE_CACHE_CONTROL
-    });
-    uploadedKeys.push(extraCoverKey);
-
-    await uploadToR2({
-      key: extraThumbSmallKey,
-      body: extraAssets.thumbSmall,
-      contentType: 'image/webp',
-      cacheControl: IMAGE_CACHE_CONTROL
-    });
-    uploadedKeys.push(extraThumbSmallKey);
-
-    await uploadToR2({
-      key: extraThumbLargeKey,
-      body: extraAssets.thumbLarge,
-      contentType: 'image/webp',
-      cacheControl: IMAGE_CACHE_CONTROL
-    });
-    uploadedKeys.push(extraThumbLargeKey);
-
-    extraAssetRecords.push({
-      pdfKey: extraPdfKey,
-      coverImageKey: extraCoverKey,
-      thumbLargeKey: extraThumbLargeKey,
-      thumbSmallKey: extraThumbSmallKey,
-      width: extraAssets.width,
-      height: extraAssets.height,
-      fileSizeBytes: getBufferSize(extraPdfBuffer),
-      position: existingAssetCount + index + 1
-    });
-  }
-
-  try {
     const [categories, tags] = await Promise.all([
       prisma.category.findMany({
         where: { slug: { in: metadata.categories } },
@@ -333,16 +262,12 @@ export async function PUT(
         slug: metadata.slug,
         title: metadata.title,
         description: `${metadata.title} boyama sayfası.`,
-        orientation: "PORTRAIT",
-        pdfKey,
-        coverImageKey: coverKey,
-        thumbWebpKey: thumbKeyLarge,
-        width: newAssets?.width ?? existingPage.width,
-        height: newAssets?.height ?? existingPage.height,
-        fileSizeBytes:
-          newPdfBuffer !== null
-            ? getBufferSize(newPdfBuffer)
-            : existingPage.fileSizeBytes,
+        pdfKey: assetInfo?.pdfKey ?? existingPage.pdfKey,
+        coverImageKey: assetInfo?.coverKey ?? existingPage.coverImageKey,
+        thumbWebpKey: assetInfo?.thumbLargeKey ?? existingPage.thumbWebpKey,
+        width: assetInfo?.width ?? existingPage.width,
+        height: assetInfo?.height ?? existingPage.height,
+        fileSizeBytes: assetInfo?.fileSizeBytes ?? existingPage.fileSizeBytes,
         categories: {
           deleteMany: {},
           create: categories.map((category) => ({
@@ -354,14 +279,12 @@ export async function PUT(
           create: tags.map((tag) => ({
             tag: { connect: { id: tag.id } }
           }))
-        },
-        ...(extraAssetRecords.length > 0
-          ? {
-              assets: {
-                create: extraAssetRecords
-              }
-            }
-          : {})
+        }
+      },
+      select: {
+        id: true,
+        slug: true,
+        parent: { select: { slug: true } }
       }
     });
 
@@ -377,13 +300,16 @@ export async function PUT(
     if (slugChanged) {
       revalidatePath(`/sayfa/${existingPage.slug}`);
     }
-    revalidatePath("/admin/pages");
+    if (updatedPage.parent?.slug) {
+      revalidatePath(`/sayfa/${updatedPage.parent.slug}`);
+    }
     metadata.categories.forEach((slug) => {
       revalidatePath(`/kategori/${slug}`);
     });
     metadata.tags.forEach((slug) => {
       revalidatePath(`/etiket/${slug}`);
     });
+    revalidatePath("/admin/pages");
 
     return NextResponse.json({ success: true, page: updatedPage });
   } catch (error) {
@@ -399,6 +325,23 @@ export async function PUT(
   }
 }
 
+function collectKeys(record: {
+  pdfKey: string | null;
+  coverImageKey: string | null;
+  thumbWebpKey: string | null;
+}) {
+  const keys = new Set<string>();
+  if (record.pdfKey) keys.add(record.pdfKey);
+  if (record.coverImageKey) keys.add(record.coverImageKey);
+  if (record.thumbWebpKey) {
+    keys.add(record.thumbWebpKey);
+    if (record.thumbWebpKey.includes("-800.")) {
+      keys.add(record.thumbWebpKey.replace("-800.", "-400."));
+    }
+  }
+  return keys;
+}
+
 export async function DELETE(
   _request: Request,
   { params }: { params: { id: string } }
@@ -408,7 +351,16 @@ export async function DELETE(
     include: {
       categories: { include: { category: { select: { slug: true } } } },
       tags: { include: { tag: { select: { slug: true } } } },
-      assets: true
+      parent: { select: { slug: true } },
+      children: {
+        select: {
+          id: true,
+          slug: true,
+          pdfKey: true,
+          coverImageKey: true,
+          thumbWebpKey: true
+        }
+      }
     }
   });
 
@@ -418,26 +370,17 @@ export async function DELETE(
 
   const categorySlugs = new Set(page.categories.map((entry) => entry.category.slug));
   const tagSlugs = new Set(page.tags.map((entry) => entry.tag.slug));
+  const slugsToRevalidate = new Set<string>([page.slug]);
+  if (page.parent?.slug) {
+    slugsToRevalidate.add(page.parent.slug);
+  }
+  page.children.forEach((child) => slugsToRevalidate.add(child.slug));
 
   const keysToRemove = new Set<string>();
-  if (page.pdfKey) {
-    keysToRemove.add(page.pdfKey);
-  }
-  if (page.coverImageKey) {
-    keysToRemove.add(page.coverImageKey);
-  }
-  if (page.thumbWebpKey) {
-    keysToRemove.add(page.thumbWebpKey);
-    if (page.thumbWebpKey.includes("-800.")) {
-      keysToRemove.add(page.thumbWebpKey.replace("-800.", "-400."));
-    }
-  }
-  for (const asset of page.assets) {
-    keysToRemove.add(asset.pdfKey);
-    keysToRemove.add(asset.coverImageKey);
-    keysToRemove.add(asset.thumbLargeKey);
-    keysToRemove.add(asset.thumbSmallKey);
-  }
+  collectKeys(page).forEach((key) => keysToRemove.add(key));
+  page.children.forEach((child) => {
+    collectKeys(child).forEach((key) => keysToRemove.add(key));
+  });
 
   try {
     await prisma.coloringPage.delete({
@@ -462,8 +405,10 @@ export async function DELETE(
 
   revalidatePath("/");
   revalidatePath("/ara");
-  revalidatePath(`/sayfa/${page.slug}`);
   revalidatePath("/admin/pages");
+  slugsToRevalidate.forEach((slug) => {
+    revalidatePath(`/sayfa/${slug}`);
+  });
   for (const slug of categorySlugs) {
     revalidatePath(`/kategori/${slug}`);
   }
@@ -473,5 +418,3 @@ export async function DELETE(
 
   return NextResponse.json({ success: true });
 }
-
-

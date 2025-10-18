@@ -1,8 +1,8 @@
 import { ColoringPageCard } from "@/components/cards/coloring-page-card";
-import type { ColoringPageWithRelations } from "@/lib/data/coloring-pages";
+import type { ColoringPageSummary } from "@/lib/data/coloring-pages";
 
 type FeaturedGridProps = {
-  pages: ColoringPageWithRelations[];
+  pages: ColoringPageSummary[];
 };
 
 export function FeaturedGrid({ pages }: FeaturedGridProps) {

@@ -22,6 +22,13 @@
       "migration_name": "0003_add_coloring_page_assets",
       "logs": [],
       "started_at": null
+    },
+    {
+      "checksum": "",
+      "finished_at": null,
+      "migration_name": "0004_parent_child_pages",
+      "logs": [],
+      "started_at": null
     }
   ]
 }

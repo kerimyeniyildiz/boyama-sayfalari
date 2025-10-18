@@ -1,9 +1,6 @@
 import { notFound } from "next/navigation";
 
-import {
-  getColoringPageBySlug,
-  getRelatedPages
-} from "@/lib/data/coloring-pages";
+import { getColoringPageBySlug } from "@/lib/data/coloring-pages";
 import { getPublicUrl } from "@/lib/r2";
 import { buildCreativeWorkJsonLd, buildMetadata, siteConfig } from "@/lib/seo";
 import { JsonLd } from "@/components/seo/json-ld";
@@ -68,11 +65,6 @@ export default async function ColoringPageRoute({ params }: PageProps) {
     notFound();
   }
 
-  const categorySlugs = page.categories.map((entry) => entry.category.slug);
-  const tagSlugs = page.tags.map((entry) => entry.tag.slug);
-
-  const related = await getRelatedPages(page.slug, categorySlugs, tagSlugs);
-
   const pdfUrl = getPublicUrl(page.pdfKey);
   const imageUrl = getPublicUrl(page.thumbWebpKey);
   const createdAt = normalizeDate(page.createdAt);
@@ -98,7 +90,7 @@ export default async function ColoringPageRoute({ params }: PageProps) {
 
   return (
     <>
-      <ColoringPageDetail page={page} related={related} />
+      <ColoringPageDetail page={page} />
       <JsonLd data={jsonLd} />
     </>
   );
