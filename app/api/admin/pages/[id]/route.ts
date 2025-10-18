@@ -4,17 +4,18 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { pageMetadataSchema } from "@/lib/validation";
 import { slugify } from "@/lib/slug";
-import { generateWebpVariants, getBufferSize } from "@/lib/images";
-import { deleteFromR2, uploadToR2 } from "@/lib/r2";
-
-export const runtime = "nodejs";
+import { generateImageAssets, generatePdfFromImage, getBufferSize } from "@/lib/images";
+import { uploadToR2, deleteFromR2 } from "@/lib/r2";
 
 const IMAGE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 const PDF_CACHE_CONTROL = "public, max-age=31536000, immutable";
-const MAX_PDF_SIZE = 10 * 1024 * 1024; // 10MB
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
-const PDF_CONTENT_TYPE = "application/pdf";
-const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/svg+xml"
+]);
 
 type ErrorResponse = {
   error: {
@@ -24,7 +25,18 @@ type ErrorResponse = {
   };
 };
 
-function jsonError(
+function jsonError(status: number, code: string, message: string) {
+  const body: ErrorResponse = {
+    error: {
+      code,
+      message
+    }
+  };
+
+  return NextResponse.json(body, { status });
+}
+
+function jsonFieldError(
   status: number,
   code: string,
   message: string,
@@ -41,28 +53,15 @@ function jsonError(
   return NextResponse.json(body, { status });
 }
 
-function normalizeFieldErrors(
-  fieldErrors: Record<string, string[] | undefined>
-): Record<string, string[]> | undefined {
-  const entries = Object.entries(fieldErrors).filter(
-    (entry): entry is [string, string[]] =>
-      Array.isArray(entry[1]) && entry[1].length > 0
-  );
-
-  if (entries.length === 0) {
-    return undefined;
-  }
-
-  return Object.fromEntries(entries);
+function collectStrings(values: FormDataEntryValue[]): string[] {
+  return values
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
 }
 
 function toString(value: FormDataEntryValue | null): string {
   return typeof value === "string" ? value.trim() : "";
-}
-
-function toOptionalString(value: FormDataEntryValue | null): string | undefined {
-  const parsed = toString(value);
-  return parsed.length ? parsed : undefined;
 }
 
 export async function PUT(
@@ -79,46 +78,21 @@ export async function PUT(
   });
 
   if (!existingPage) {
-    return jsonError(404, "PAGE_NOT_FOUND", "Sayfa bulunamadÄ±.");
+    return jsonError(404, "PAGE_NOT_FOUND", "Sayfa bulunamadý.");
   }
+
+  const imageFile = (formData.get("image") ?? formData.get("cover")) as
+    | File
+    | null;
 
   const title = toString(formData.get("title")) || existingPage.title;
   const rawSlug = toString(formData.get("slug"));
-  const computedSlug = rawSlug
-    ? slugify(rawSlug)
-    : existingPage.slug;
-
-  const submittedCategories = formData
-    .getAll("categories")
-    .filter((value): value is string => typeof value === "string")
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0);
-
-  const submittedTags = formData
-    .getAll("tags")
-    .filter((value): value is string => typeof value === "string")
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0);
+  const submittedCategories = collectStrings(formData.getAll("categories"));
+  const submittedTags = collectStrings(formData.getAll("tags"));
 
   const metadataInput = {
     title,
-    slug: computedSlug,
-    description: toString(formData.get("description")) || existingPage.description,
-    difficulty:
-      toString(formData.get("difficulty")).toUpperCase() ||
-      existingPage.difficulty,
-    orientation:
-      toString(formData.get("orientation")).toUpperCase() ||
-      existingPage.orientation,
-    ageMin: toString(formData.get("ageMin")),
-    ageMax: toString(formData.get("ageMax")),
-    artist: toOptionalString(formData.get("artist")) ?? existingPage.artist ?? undefined,
-    license: toOptionalString(formData.get("license")) ?? existingPage.license ?? undefined,
-    sourceUrl: toOptionalString(formData.get("sourceUrl")) ?? existingPage.sourceUrl ?? undefined,
-    status:
-      toString(formData.get("status")).toUpperCase() ||
-      existingPage.status,
-    language: toString(formData.get("language")) || existingPage.language,
+    slug: rawSlug ? slugify(rawSlug) : existingPage.slug,
     categories:
       submittedCategories.length > 0
         ? submittedCategories
@@ -126,168 +100,122 @@ export async function PUT(
     tags:
       submittedTags.length > 0
         ? submittedTags
-        : existingPage.tags.map((item) => item.tag.slug),
-    width: toString(formData.get("width")),
-    height: toString(formData.get("height")),
-    fileSizeBytes: toString(formData.get("fileSizeBytes"))
+        : existingPage.tags.map((item) => item.tag.slug)
   };
 
   const parsed = pageMetadataSchema.safeParse(metadataInput);
   if (!parsed.success) {
-    const fieldErrors = normalizeFieldErrors(
-      parsed.error.flatten().fieldErrors
-    );
-    return jsonError(
+    return jsonFieldError(
       400,
       "VALIDATION_ERROR",
-      "Form alanlarÄ±nda hatalar var.",
-      fieldErrors
+      "Form alanlarýnda hatalar var.",
+      parsed.error.flatten().fieldErrors as Record<string, string[]>
     );
   }
 
   const metadata = parsed.data;
-  const pdfFile = formData.get("pdf");
-  const coverFile = formData.get("cover");
-
   const slugChanged = metadata.slug !== existingPage.slug;
 
-  if (slugChanged && !(pdfFile instanceof File) && !(coverFile instanceof File)) {
-    return jsonError(
+  if (slugChanged && !(imageFile instanceof File && imageFile.size > 0)) {
+    return jsonFieldError(
       400,
-      "FILES_REQUIRED_FOR_SLUG_CHANGE",
-      "Slug deÄŸiÅŸtirildiÄŸinde PDF ve kapak dosyalarÄ±nÄ±n yeniden yÃ¼klenmesi gerekir.",
+      "IMAGE_REQUIRED_FOR_SLUG_CHANGE",
+      "Slug deðiþtirildiðinde görselin yeniden yüklenmesi gerekir.",
       {
-        pdf: [
-          "Slug deÄŸiÅŸtirildiÄŸinde PDF dosyasÄ±nÄ±n yeniden yÃ¼klenmesi gerekir."
-        ],
-        cover: [
-          "Slug deÄŸiÅŸtirildiÄŸinde kapak gÃ¶rselinin yeniden yÃ¼klenmesi gerekir."
-        ]
+        image: ["Slug deðiþtirildiðinde görselin yeniden yüklenmesi gerekir."]
       }
     );
   }
 
-  let pdfKey = existingPage.pdfKey;
-  let coverKey = existingPage.coverImageKey;
-  let thumbKeyLarge = existingPage.thumbWebpKey;
-  const thumbKeySmall = thumbKeyLarge.replace("-800.webp", "-400.webp");
+  let newPdfBuffer: Buffer | null = null;
+  let newAssets: Awaited<ReturnType<typeof generateImageAssets>> | null = null;
+
+  if (imageFile instanceof File && imageFile.size > 0) {
+    if (!ALLOWED_IMAGE_TYPES.has(imageFile.type)) {
+      return jsonFieldError(
+        400,
+        "INVALID_IMAGE_TYPE",
+        "Görsel yalnýzca PNG, JPEG, SVG veya WebP formatýnda olabilir.",
+        {
+          image: ["Görsel yalnýzca PNG, JPEG, SVG veya WebP formatýnda olabilir."]
+        }
+      );
+    }
+
+    if (imageFile.size > MAX_IMAGE_SIZE) {
+      return jsonFieldError(
+        400,
+        "IMAGE_TOO_LARGE",
+        `Görsel ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sýnýrýný aþýyor.`,
+        {
+          image: [`Görsel ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sýnýrýný aþýyor.`]
+        }
+      );
+    }
+
+    const imageBuffer = Buffer.from(await imageFile.arrayBuffer());
+    newPdfBuffer = await generatePdfFromImage(imageBuffer);
+    newAssets = await generateImageAssets(imageBuffer);
+  }
+
+  const pdfKey = newPdfBuffer
+    ? `pdf/${metadata.slug}.pdf`
+    : existingPage.pdfKey;
+  const coverKey = newPdfBuffer
+    ? `cover/${metadata.slug}.webp`
+    : existingPage.coverImageKey;
+  const thumbKeyLarge = newPdfBuffer
+    ? `thumb/${metadata.slug}-800.webp`
+    : existingPage.thumbWebpKey;
+  const thumbKeySmall = newPdfBuffer
+    ? `thumb/${metadata.slug}-400.webp`
+    : existingPage.thumbWebpKey.replace("-800.webp", "-400.webp");
 
   const uploadedKeys: string[] = [];
   const keysToDelete: string[] = [];
 
+  if (newPdfBuffer && newAssets) {
+    keysToDelete.push(
+      existingPage.pdfKey,
+      existingPage.coverImageKey,
+      existingPage.thumbWebpKey,
+      existingPage.thumbWebpKey.replace("-800.webp", "-400.webp")
+    );
+
+    await uploadToR2({
+      key: pdfKey,
+      body: newPdfBuffer,
+      contentType: "application/pdf",
+      cacheControl: PDF_CACHE_CONTROL
+    });
+    uploadedKeys.push(pdfKey);
+
+    await uploadToR2({
+      key: coverKey,
+      body: newAssets.cover,
+      contentType: "image/webp",
+      cacheControl: IMAGE_CACHE_CONTROL
+    });
+    uploadedKeys.push(coverKey);
+
+    await uploadToR2({
+      key: thumbKeySmall,
+      body: newAssets.thumbSmall,
+      contentType: "image/webp",
+      cacheControl: IMAGE_CACHE_CONTROL
+    });
+    uploadedKeys.push(thumbKeySmall);
+
+    await uploadToR2({
+      key: thumbKeyLarge,
+      body: newAssets.thumbLarge,
+      contentType: "image/webp",
+      cacheControl: IMAGE_CACHE_CONTROL
+    });
+    uploadedKeys.push(thumbKeyLarge);
+  }
+
   try {
-    if (pdfFile instanceof File) {
-      if (pdfFile.size === 0) {
-        return jsonError(400, "PDF_REQUIRED", "PDF dosyasÄ± eksik.", {
-          pdf: ["PDF dosyasÄ± eksik."]
-        });
-      }
-
-      if (pdfFile.type !== PDF_CONTENT_TYPE) {
-        return jsonError(
-          400,
-          "INVALID_PDF_TYPE",
-          "PDF dosya formatÄ± geÃ§ersiz.",
-          { pdf: ["PDF dosya formatÄ± geÃ§ersiz."] }
-        );
-      }
-
-      if (pdfFile.size > MAX_PDF_SIZE) {
-        return jsonError(
-          400,
-          "PDF_TOO_LARGE",
-          `PDF dosyasÄ± ${MAX_PDF_SIZE / (1024 * 1024)}MB sÄ±nÄ±rÄ±nÄ± aÅŸÄ±yor.`,
-          {
-            pdf: [
-              `PDF dosyasÄ± ${MAX_PDF_SIZE / (1024 * 1024)}MB sÄ±nÄ±rÄ±nÄ± aÅŸÄ±yor.`
-            ]
-          }
-        );
-      }
-
-      const pdfBuffer = Buffer.from(await pdfFile.arrayBuffer());
-      pdfKey = `pdf/${metadata.slug}.pdf`;
-      await uploadToR2({
-        key: pdfKey,
-        body: pdfBuffer,
-        contentType: "application/pdf",
-        cacheControl: PDF_CACHE_CONTROL
-      });
-      uploadedKeys.push(pdfKey);
-      keysToDelete.push(existingPage.pdfKey);
-      metadata.fileSizeBytes = metadata.fileSizeBytes ?? getBufferSize(pdfBuffer);
-    }
-
-    if (coverFile instanceof File) {
-      if (coverFile.size === 0) {
-        return jsonError(400, "COVER_REQUIRED", "Kapak gÃ¶rseli eksik.", {
-          cover: ["Kapak gÃ¶rseli eksik."]
-        });
-      }
-
-      if (!ALLOWED_IMAGE_TYPES.has(coverFile.type)) {
-        return jsonError(
-          400,
-          "INVALID_COVER_TYPE",
-          "Kapak gÃ¶rseli sadece PNG, JPEG veya WebP olabilir.",
-          {
-            cover: [
-              "Kapak gÃ¶rseli sadece PNG, JPEG veya WebP olabilir."
-            ]
-          }
-        );
-      }
-
-      if (coverFile.size > MAX_IMAGE_SIZE) {
-        return jsonError(
-          400,
-          "COVER_TOO_LARGE",
-          `Kapak gÃ¶rseli ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sÄ±nÄ±rÄ±nÄ± aÅŸÄ±yor.`,
-          {
-            cover: [
-              `Kapak gÃ¶rseli ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sÄ±nÄ±rÄ±nÄ± aÅŸÄ±yor.`
-            ]
-          }
-        );
-      }
-
-      const coverBuffer = Buffer.from(await coverFile.arrayBuffer());
-      const variants = await generateWebpVariants(coverBuffer);
-      const extension = coverFile.type.split("/")[1] ?? "jpg";
-      coverKey = `cover/${metadata.slug}.${extension}`;
-      thumbKeyLarge = `thumb/${metadata.slug}-800.webp`;
-      const newThumbSmall = `thumb/${metadata.slug}-400.webp`;
-
-      await uploadToR2({
-        key: coverKey,
-        body: coverBuffer,
-        contentType: coverFile.type,
-        cacheControl: IMAGE_CACHE_CONTROL
-      });
-      uploadedKeys.push(coverKey);
-
-      await uploadToR2({
-        key: newThumbSmall,
-        body: variants.small,
-        contentType: "image/webp",
-        cacheControl: IMAGE_CACHE_CONTROL
-      });
-      uploadedKeys.push(newThumbSmall);
-
-      await uploadToR2({
-        key: thumbKeyLarge,
-        body: variants.large,
-        contentType: "image/webp",
-        cacheControl: IMAGE_CACHE_CONTROL
-      });
-      uploadedKeys.push(thumbKeyLarge);
-
-      keysToDelete.push(existingPage.coverImageKey, existingPage.thumbWebpKey, thumbKeySmall);
-
-      metadata.width = variants.width ?? metadata.width;
-      metadata.height = variants.height ?? metadata.height;
-    }
-
     const [categories, tags] = await Promise.all([
       prisma.category.findMany({
         where: { slug: { in: metadata.categories } },
@@ -304,22 +232,17 @@ export async function PUT(
       data: {
         slug: metadata.slug,
         title: metadata.title,
-        description: metadata.description,
-        difficulty: metadata.difficulty,
-        orientation: metadata.orientation,
-        ageMin: metadata.ageMin,
-        ageMax: metadata.ageMax,
-        artist: metadata.artist,
-        license: metadata.license,
-        sourceUrl: metadata.sourceUrl,
-        status: metadata.status,
-        language: metadata.language,
+        description: `${metadata.title} boyama sayfasi.`,
+        orientation: "PORTRAIT",
         pdfKey,
         coverImageKey: coverKey,
         thumbWebpKey: thumbKeyLarge,
-        width: metadata.width ?? existingPage.width,
-        height: metadata.height ?? existingPage.height,
-        fileSizeBytes: metadata.fileSizeBytes ?? existingPage.fileSizeBytes,
+        width: newAssets?.width ?? existingPage.width,
+        height: newAssets?.height ?? existingPage.height,
+        fileSizeBytes:
+          newPdfBuffer !== null
+            ? getBufferSize(newPdfBuffer)
+            : existingPage.fileSizeBytes,
         categories: {
           deleteMany: {},
           create: categories.map((category) => ({
@@ -344,24 +267,27 @@ export async function PUT(
     revalidatePath("/");
     revalidatePath("/ara");
     revalidatePath(`/sayfa/${updatedPage.slug}`);
+    if (slugChanged) {
+      revalidatePath(`/sayfa/${existingPage.slug}`);
+    }
+    revalidatePath("/admin/pages");
     metadata.categories.forEach((slug) => {
       revalidatePath(`/kategori/${slug}`);
     });
     metadata.tags.forEach((slug) => {
       revalidatePath(`/etiket/${slug}`);
     });
-    revalidatePath("/admin/pages");
 
     return NextResponse.json({ success: true, page: updatedPage });
   } catch (error) {
     await Promise.all(
       uploadedKeys.map((key) => deleteFromR2(key).catch(() => undefined))
     );
-    console.error("Sayfa gÃ¼ncellenemedi", error);
+    console.error("Sayfa güncellenemedi", error);
     return jsonError(
       500,
       "PAGE_UPDATE_FAILED",
-      "Sayfa gÃ¼ncellenirken bir hata oluÅŸtu."
+      "Sayfa güncellenirken bir hata oluþtu."
     );
   }
 }
@@ -379,11 +305,11 @@ export async function DELETE(
   });
 
   if (!page) {
-    return jsonError(404, "PAGE_NOT_FOUND", "Sayfa bulunamadï¿½ï¿½.");
+    return jsonError(404, "PAGE_NOT_FOUND", "Sayfa bulunamadý.");
   }
 
-  const categorySlugs = new Set<string>(page.categories.map((entry) => entry.category.slug));
-  const tagSlugs = new Set<string>(page.tags.map((entry) => entry.tag.slug));
+  const categorySlugs = new Set(page.categories.map((entry) => entry.category.slug));
+  const tagSlugs = new Set(page.tags.map((entry) => entry.tag.slug));
 
   const keysToRemove = new Set<string>();
   if (page.pdfKey) {
@@ -408,7 +334,7 @@ export async function DELETE(
     return jsonError(
       500,
       "PAGE_DELETE_FAILED",
-      "Sayfa silinirken bir hata oluï¿½Ytu."
+      "Sayfa silinirken bir hata oluþtu."
     );
   }
 
@@ -423,13 +349,15 @@ export async function DELETE(
   revalidatePath("/");
   revalidatePath("/ara");
   revalidatePath(`/sayfa/${page.slug}`);
-  categorySlugs.forEach((slug) => {
-    revalidatePath(`/kategori/${slug}`);
-  });
-  tagSlugs.forEach((slug) => {
-    revalidatePath(`/etiket/${slug}`);
-  });
   revalidatePath("/admin/pages");
+  for (const slug of categorySlugs) {
+    revalidatePath(`/kategori/${slug}`);
+  }
+  for (const slug of tagSlugs) {
+    revalidatePath(`/etiket/${slug}`);
+  }
 
   return NextResponse.json({ success: true });
 }
+
+

@@ -20,6 +20,8 @@ export async function GET(_: Request, context: RouteContext) {
     return NextResponse.next();
   }
 
+  const topTags = page.tags.slice(0, 2).map((tag) => `#${tag.tag.name}`);
+
   return new ImageResponse(
     (
       <div
@@ -72,7 +74,8 @@ export async function GET(_: Request, context: RouteContext) {
             color: "#4A5568"
           }}
         >
-          <span>PDF indir | {page.difficulty}</span>
+          <span>PDF indir</span>
+          <span>{topTags.join("  ")}</span>
           <span>{page.downloads} indirme</span>
         </div>
       </div>

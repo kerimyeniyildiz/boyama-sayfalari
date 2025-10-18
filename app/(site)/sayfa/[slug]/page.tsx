@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: PageProps) {
 
   if (!page) {
     return buildMetadata({
-      title: "Boyama sayfası bulunamadı",
+      title: "Boyama sayfasi bulunamadi",
       description: siteConfig.description,
       path: `/sayfa/${params.slug}`
     });
@@ -53,11 +53,10 @@ export default async function ColoringPageRoute({ params }: PageProps) {
     notFound();
   }
 
-  const related = await getRelatedPages(
-    page.slug,
-    page.difficulty,
-    page.orientation
-  );
+  const categorySlugs = page.categories.map((entry) => entry.category.slug);
+  const tagSlugs = page.tags.map((entry) => entry.tag.slug);
+
+  const related = await getRelatedPages(page.slug, categorySlugs, tagSlugs);
 
   const pdfUrl = getPublicUrl(page.pdfKey);
   const imageUrl = getPublicUrl(page.thumbWebpKey);
@@ -73,13 +72,9 @@ export default async function ColoringPageRoute({ params }: PageProps) {
       height: page.height ?? undefined
     },
     keywords: [
-      page.difficulty,
-      page.orientation,
       ...page.categories.map((entry) => entry.category.name),
       ...page.tags.map((entry) => entry.tag.name)
     ],
-    author: page.artist ?? undefined,
-    license: page.license ?? undefined,
     datePublished: page.createdAt.toISOString(),
     dateModified: page.updatedAt.toISOString()
   });

@@ -1,4 +1,4 @@
-ï»¿import Link from "next/link";
+import Link from "next/link";
 import type { Route } from "next";
 import { notFound } from "next/navigation";
 import type {
@@ -44,8 +44,6 @@ type Filters = {
   q?: string;
   kategori?: string;
   etiket?: string;
-  difficulty?: string;
-  orientation?: string;
   yas?: number;
   sayfa: number;
 };
@@ -92,7 +90,7 @@ export function SearchResults({
     <section className="container space-y-10 py-12">
       <div className="rounded-3xl border border-brand-dark/10 bg-white/90 p-6 shadow-card">
         <form className="grid gap-6" action={searchRoute} method="get">
-          <div className="grid gap-4 md:grid-cols-[1.5fr_1fr_1fr_1fr_1fr]">
+          <div className="grid gap-4 md:grid-cols-[1.5fr_1fr_1fr_1fr]">
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-brand-dark/80">
                 Anahtar kelime
@@ -102,7 +100,7 @@ export function SearchResults({
                 <Input
                   name="q"
                   defaultValue={filters.q}
-                  placeholder="Ã–rn. uzay, peri, hayvan"
+                  placeholder="Örn. uzay, peri, hayvan"
                   className="pl-10"
                 />
               </div>
@@ -112,7 +110,7 @@ export function SearchResults({
                 Kategori
               </label>
               <Select name="kategori" defaultValue={filters.kategori ?? ""}>
-                <option value="">TÃ¼mÃ¼</option>
+                <option value="">Tümü</option>
                 {categories.map((category) => (
                   <option key={category.id} value={category.slug}>
                     {category.name}
@@ -125,7 +123,7 @@ export function SearchResults({
                 Etiket
               </label>
               <Select name="etiket" defaultValue={filters.etiket ?? ""}>
-                <option value="">TÃ¼mÃ¼</option>
+                <option value="">Tümü</option>
                 {tags.map((tag) => (
                   <option key={tag.id} value={tag.slug}>
                     #{tag.name}
@@ -135,18 +133,7 @@ export function SearchResults({
             </div>
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-brand-dark/80">
-                Zorluk
-              </label>
-              <Select name="difficulty" defaultValue={filters.difficulty ?? ""}>
-                <option value="">TÃ¼mÃ¼</option>
-                <option value="EASY">Kolay</option>
-                <option value="MEDIUM">Orta</option>
-                <option value="HARD">Zor</option>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-brand-dark/80">
-                YaÅŸ
+                Yaþ
               </label>
               <Input
                 type="number"
@@ -161,7 +148,7 @@ export function SearchResults({
           <div className="flex flex-wrap items-center gap-3">
             <Button type="submit">Filtrele</Button>
             <Button type="reset" variant="ghost" asChild>
-              <Link href={searchRoute}>Filtreleri sÄ±fÄ±rla</Link>
+              <Link href={searchRoute}>Filtreleri sýfýrla</Link>
             </Button>
             <input type="hidden" name="sayfa" value="1" />
           </div>
@@ -171,7 +158,7 @@ export function SearchResults({
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <p className="text-sm text-brand-dark/70">
-            {result.total} sonuÃ§ bulundu.
+            {result.total} sonuç bulundu.
           </p>
           <p className="text-xs text-brand-dark/50">
             Sayfa {result.page} / {totalPages}
@@ -179,7 +166,7 @@ export function SearchResults({
         </div>
         {result.results.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-brand-dark/20 bg-white/70 p-10 text-center text-sm text-brand-dark/70">
-            AradÄ±ÄŸÄ±nÄ±z kriterlere uygun iÃ§erik bulunamadÄ±. FarklÄ± anahtar
+            Aradýðýnýz kriterlere uygun içerik bulunamadý. Farklý anahtar
             kelimeler veya filtreler deneyin.
           </div>
         ) : (
@@ -211,7 +198,7 @@ export function SearchResults({
                   })
                 }}
               >
-                Ã–nceki
+                Önceki
               </Link>
             </Button>
             <Button
@@ -239,3 +226,4 @@ export function SearchResults({
     </section>
   );
 }
+

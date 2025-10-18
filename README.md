@@ -1,96 +1,98 @@
-ï»¿# Boyama SayfalarÄ±
+# Boyama Sayfaları
 
-Next.js App Router tabanlÄ±, Prisma + PostgreSQL kullanan ve Cloudflare R2 Ã¼zerinde medya yÃ¶netimi saÄŸlayan TÃ¼rkÃ§e boyama sayfasÄ± platformu.
+Next.js App Router tabanlı, Prisma + PostgreSQL kullanan ve Cloudflare R2 üzerinde medya yönetimi sağlayan Türkçe boyama sayfası platformu.
 
-## Ã–zellikler
+## Özellikler
 
-- âœ… SSG + ISR ile optimize edilmiÅŸ kamu sayfalarÄ± (`/`, `/sayfa/[slug]`, `/kategori/[slug]`, `/etiket/[slug]`, `/ara`)
-- âœ… Prisma 5 + PostgreSQL 16 veri modeli (kategori, etiket, indirme takibi, admin kullanÄ±cÄ±)
-- âœ… Cloudflare R2 entegrasyonu (PDF + orijinal kapak + 400w/800w WebP thumbnail)
-- âœ… Sharp ile gÃ¶rsel iÅŸleme, tam metin arama (TÃ¼rkÃ§e tsvector + GIN)
-- âœ… Admin paneli (e-posta/ÅŸifre, HttpOnly cookie oturumu)
-- âœ… Admin panelinde dosya yÃ¼kleme limitleri (PDF 10MB, kapak 5MB) ve anlÄ±k form hatalarÄ±
-- âœ… SEO: `generateMetadata`, `sitemap`, `robots`, JSON-LD, dinamik `/og/[slug]`
-- âœ… Vitest (unit), Playwright (e2e) ve GitHub Actions CI
+- ? SSG + ISR ile optimize edilmiş kamu sayfaları (`/`, `/sayfa/[slug]`, `/kategori/[slug]`, `/etiket/[slug]`, `/ara`)
+- ? Prisma 5 + PostgreSQL 16 veri modeli (kategori, etiket, indirme takibi, admin kullanıcı)
+- ? Cloudflare R2 entegrasyonu (PDF + orijinal kapak + 400w/800w WebP thumbnail)
+- ? Sharp ile görsel işleme, tam metin arama (Türkçe tsvector + GIN)
+- ? Admin paneli (e-posta/şifre, HttpOnly cookie oturumu)
+- ? Admin panelinde dosya yükleme limitleri (PDF 10MB, kapak 5MB) ve anlık form hataları
+- ? Görsellerden otomatik WebP thumbnail ve PDF üretimi
+- ? SEO: `generateMetadata`, `sitemap`, `robots`, JSON-LD, dinamik `/og/[slug]`
+- ? Vitest (unit), Playwright (e2e) ve GitHub Actions CI
 
-## Gerekli AraÃ§lar
+## Gerekli Araçlar
 
 - Node.js 22 LTS
 - npm 10+
 - PostgreSQL 16
-- Cloudflare R2 bucket + API anahtarlarÄ±
+- Cloudflare R2 bucket + API anahtarları
 
 ## Kurulum
 
-1. BaÄŸÄ±mlÄ±lÄ±klarÄ± yÃ¼kleyin:
+1. Bağımlılıkları yükleyin:
 
    ```bash
    npm install
    ```
 
-2. `.env.example` dosyasÄ±nÄ± `.env.local` olarak kopyalayÄ±n ve deÄŸerleri doldurun.
+2. `.env.example` dosyasını `.env.local` olarak kopyalayın ve değerleri doldurun.
 
    ```bash
    cp .env.example .env.local
    ```
 
-3. YÃ¶netici iÃ§in bcrypt hash Ã¼retin ve `.env.local` iÃ§ine ekleyin:
+3. Yönetici için bcrypt hash üretin ve `.env.local` içine ekleyin:
 
    ```bash
    npm run admin:password -- <yeni-parola>
    ```
 
-4. Prisma ÅŸemasÄ±nÄ± generate edin ve veritabanÄ±nÄ± migrate edin:
+4. Prisma şemasını generate edin ve veritabanını migrate edin:
 
    ```bash
    npx prisma migrate dev --name init
    npm run seed
    ```
 
-5. GeliÅŸtirme sunucusunu baÅŸlatÄ±n:
+5. Geliştirme sunucusunu başlatın:
 
    ```bash
    npm run dev
    ```
 
-   Uygulama varsayÄ±lan olarak [http://localhost:3000](http://localhost:3000) adresinde Ã§alÄ±ÅŸÄ±r.
+   Uygulama varsayılan olarak [http://localhost:3000](http://localhost:3000) adresinde çalışır.
 
 ## Cloudflare R2
 
-- Bucket anahtarlarÄ±nÄ± `.env.local` dosyasÄ±na girin.
-- `R2_PUBLIC_URL` tarayÄ±cÄ±dan doÄŸrudan eriÅŸilebilen (r2.dev) domain olmalÄ±dÄ±r.
-- Admin panelinden yÃ¼klenen PDF / gÃ¶rsel dosyalar aÅŸaÄŸÄ±daki anahtar yapÄ±sÄ±na gÃ¶re yÃ¼klenir:
+- Bucket anahtarlarını `.env.local` dosyasına girin.
+- `R2_PUBLIC_URL` tarayıcıdan doğrudan erişilebilen (r2.dev) domain olmalıdır.
+- Admin panelinden yüklenen PDF / görsel dosyalar aşağıdaki anahtar yapısına göre yüklenir:
   - `pdf/<slug>.pdf`
-  - `cover/<slug>.<orijinal-uzantÄ±>`
+  - `cover/<slug>.<orijinal-uzantı>`
   - `thumb/<slug>-400.webp`
   - `thumb/<slug>-800.webp`
 
 ## Komutlar
 
-| Komut | AÃ§Ä±klama |
+| Komut | Açıklama |
 | --- | --- |
-| `npm run dev` | GeliÅŸtirme sunucusu |
+| `npm run dev` | Geliştirme sunucusu |
 | `npm run build` | Production build |
 | `npm run start` | Production sunucusu |
 | `npm run lint` | ESLint |
-| `npm run typecheck` | TypeScript tip kontrolÃ¼ |
+| `npm run typecheck` | TypeScript tip kontrolü |
 | `npm run test:unit` | Vitest unit testleri |
 | `npm run test:e2e` | Playwright e2e testleri |
 | `npm run test` | Unit + e2e |
-| `npm run seed` | Ã–rnek verilerle veritabanÄ±nÄ± doldurur |
+| `npm run seed` | Örnek verilerle veritabanını doldurur |
 | `npm run prisma:migrate` | Prisma migrate (dev) |
 | `npm run prisma:studio` | Prisma Studio |
-| `npm run admin:password` | Admin ÅŸifresi iÃ§in bcrypt hash Ã¼retir |
+| `npm run admin:password` | Admin şifresi için bcrypt hash üretir |
 
 ## Testler
 
 - Unit testler Vitest + Testing Library ile `npm run test:unit`
-- Playwright e2e testleri iÃ§in Ã¶nce uygulamayÄ± build edin, ardÄ±ndan `npm run test:e2e`
-- CI pipeline `.github/workflows/ci.yml` altÄ±nda tanÄ±mlanmÄ±ÅŸtÄ±r.
+- Playwright e2e testleri için önce uygulamayı build edin, ardından `npm run test:e2e`
+- CI pipeline `.github/workflows/ci.yml` altında tanımlanmıştır.
 
 ## Ek Notlar
 
-- `SESSION_SECRET` iÃ§in en az 32 karakterlik rastgele bir deÄŸer kullanÄ±n.
-- `PLAUSIBLE_*` deÄŸiÅŸkenleri opsiyonel, sadece analitik scripti ekler.
-- Admin paneline giriÅŸ: `/admin/login` (env dosyasÄ±ndaki e-posta + ÅŸifre).
-- Slug deÄŸiÅŸikliklerinde admin paneli PDF ve kapak dosyasÄ±nÄ±n yeniden yÃ¼klenmesini ister.
+- `SESSION_SECRET` için en az 32 karakterlik rastgele bir değer kullanın.
+- `PLAUSIBLE_*` değişkenleri opsiyonel, sadece analitik scripti ekler.
+- Admin paneline giriş: `/admin/login` (env dosyasındaki e-posta + şifre).
+- Slug değişikliklerinde admin paneli PDF ve kapak dosyasının yeniden yüklenmesini ister.
+

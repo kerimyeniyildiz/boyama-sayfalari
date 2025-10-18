@@ -26,5 +26,13 @@ export default async function EditPage({ params }: PageProps) {
     notFound();
   }
 
-  return <AdminPageForm page={page} categories={categories} tags={tags} />;
+  const formPage = {
+    id: page.id,
+    title: page.title,
+    slug: page.slug,
+    categories: page.categories,
+    tags: page.tags
+  };
+
+  return <AdminPageForm page={formPage} categories={categories} tags={tags} />;
 }

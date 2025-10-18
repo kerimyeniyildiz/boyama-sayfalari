@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { PageStatus } from "@prisma/client";
 import { ZodError } from "zod";
 
 import { prisma } from "@/lib/db";
 import { pageMetadataSchema } from "@/lib/validation";
 import { slugify } from "@/lib/slug";
-import { generateWebpVariants, getBufferSize } from "@/lib/images";
+import { generateImageAssets, generatePdfFromImage, getBufferSize } from "@/lib/images";
 import { uploadToR2, deleteFromR2 } from "@/lib/r2";
 import {
   getAdminPages,
@@ -16,10 +17,13 @@ export const runtime = "nodejs";
 
 const IMAGE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 const PDF_CACHE_CONTROL = "public, max-age=31536000, immutable";
-const MAX_PDF_SIZE = 10 * 1024 * 1024; // 10MB
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
-const PDF_CONTENT_TYPE = "application/pdf";
-const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/svg+xml"
+]);
 
 type ErrorResponse = {
   error: {
@@ -65,17 +69,11 @@ function toString(value: FormDataEntryValue | null): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function toOptionalString(value: FormDataEntryValue | null): string | undefined {
-  const parsed = toString(value);
-  return parsed.length ? parsed : undefined;
-}
-
-function getExtensionFromMimeType(mimeType: string): string {
-  if (mimeType === "image/png") return "png";
-  if (mimeType === "image/jpeg") return "jpg";
-  if (mimeType === "image/webp") return "webp";
-  if (mimeType === "image/svg+xml") return "svg";
-  return mimeType.split("/")[1] ?? "jpg";
+function collectStrings(values: FormDataEntryValue[]): string[] {
+  return values
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
 }
 
 export async function GET(request: Request) {
@@ -93,22 +91,20 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     if (error instanceof ZodError) {
-      const fieldErrors = normalizeFieldErrors(
-        error.flatten().fieldErrors
-      );
+      const fieldErrors = normalizeFieldErrors(error.flatten().fieldErrors);
       return jsonError(
         400,
         "INVALID_QUERY",
-        "Geçersiz filtre parametreleri.",
+        "Gecersiz filtre parametreleri.",
         fieldErrors
       );
     }
 
-    console.error("Admin page listesi getirilirken hata oluştu", error);
+    console.error("Admin page listesi getirilirken hata olustu", error);
     return jsonError(
       500,
       "PAGE_LIST_FAILED",
-      "Sayfalar yüklenirken bir hata oluştu."
+      "Sayfalar yuklenirken bir hata olustu."
     );
   }
 }
@@ -116,132 +112,69 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const formData = await request.formData();
 
-  const pdfFile = formData.get("pdf");
-  const coverFile = formData.get("cover");
+  const rawImage = (formData.get("image") ?? formData.get("cover")) as
+    | File
+    | null;
 
-  if (!(pdfFile instanceof File) || pdfFile.size === 0) {
-    return jsonError(400, "PDF_REQUIRED", "PDF dosyası eksik.", {
-      pdf: ["PDF dosyası eksik."]
+  if (!(rawImage instanceof File) || rawImage.size === 0) {
+    return jsonError(400, "IMAGE_REQUIRED", "Gorsel yuklenmedi.", {
+      image: ["Gorsel yuklenmesi zorunludur."]
     });
   }
 
-  if (pdfFile.type !== PDF_CONTENT_TYPE) {
+  if (!ALLOWED_IMAGE_TYPES.has(rawImage.type)) {
     return jsonError(
       400,
-      "INVALID_PDF_TYPE",
-      "PDF dosya formatı geçersiz.",
-      { pdf: ["PDF dosya formatı geçersiz."] }
-    );
-  }
-
-  if (pdfFile.size > MAX_PDF_SIZE) {
-    return jsonError(
-      400,
-      "PDF_TOO_LARGE",
-      `PDF dosyası ${MAX_PDF_SIZE / (1024 * 1024)}MB sınırını aşıyor.`,
+      "INVALID_IMAGE_TYPE",
+      "Gorsel yalnizca PNG, JPEG, SVG veya WebP formatinda olabilir.",
       {
-        pdf: [
-          `PDF dosyası ${MAX_PDF_SIZE / (1024 * 1024)}MB sınırını aşıyor.`
-        ]
+        image: ["Gorsel yalnizca PNG, JPEG, SVG veya WebP formatinda olabilir."]
       }
     );
   }
 
-  if (!(coverFile instanceof File) || coverFile.size === 0) {
-    return jsonError(400, "COVER_REQUIRED", "Kapak görseli eksik.", {
-      cover: ["Kapak görseli eksik."]
-    });
-  }
-
-  if (!ALLOWED_IMAGE_TYPES.has(coverFile.type)) {
+  if (rawImage.size > MAX_IMAGE_SIZE) {
     return jsonError(
       400,
-      "INVALID_COVER_TYPE",
-      "Kapak görseli sadece PNG, JPEG veya WebP olabilir.",
+      "IMAGE_TOO_LARGE",
+      `Gorsel ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sinirini asiyor.`,
       {
-        cover: ["Kapak görseli sadece PNG, JPEG veya WebP olabilir."]
-      }
-    );
-  }
-
-  if (coverFile.size > MAX_IMAGE_SIZE) {
-    return jsonError(
-      400,
-      "COVER_TOO_LARGE",
-      `Kapak görseli ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sınırını aşıyor.`,
-      {
-        cover: [
-          `Kapak görseli ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sınırını aşıyor.`
-        ]
+        image: [`Gorsel ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sinirini asiyor.`]
       }
     );
   }
 
   const title = toString(formData.get("title"));
-  if (!title) {
-    return jsonError(400, "TITLE_REQUIRED", "Başlık gereklidir.", {
-      title: ["Başlık gereklidir."]
-    });
-  }
-
   const rawSlug = toString(formData.get("slug"));
-  const computedSlug = rawSlug ? slugify(rawSlug) : slugify(title);
-
-  const submittedCategories = formData
-    .getAll("categories")
-    .filter((value): value is string => typeof value === "string")
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0);
-
-  const submittedTags = formData
-    .getAll("tags")
-    .filter((value): value is string => typeof value === "string")
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0);
+  const submittedCategories = collectStrings(formData.getAll("categories"));
+  const submittedTags = collectStrings(formData.getAll("tags"));
 
   const metadataInput = {
     title,
-    slug: computedSlug,
-    description: toString(formData.get("description")),
-    difficulty: toString(formData.get("difficulty")).toUpperCase(),
-    orientation: toString(formData.get("orientation")).toUpperCase(),
-    ageMin: toString(formData.get("ageMin")),
-    ageMax: toString(formData.get("ageMax")),
-    artist: toOptionalString(formData.get("artist")),
-    license: toOptionalString(formData.get("license")),
-    sourceUrl: toOptionalString(formData.get("sourceUrl")),
-    status: toString(formData.get("status")).toUpperCase() || "DRAFT",
-    language: toString(formData.get("language")) || "tr",
+    slug: rawSlug ? slugify(rawSlug) : slugify(title),
     categories: submittedCategories,
-    tags: submittedTags,
-    width: toString(formData.get("width")),
-    height: toString(formData.get("height")),
-    fileSizeBytes: toString(formData.get("fileSizeBytes"))
+    tags: submittedTags
   };
 
   const parsed = pageMetadataSchema.safeParse(metadataInput);
   if (!parsed.success) {
-    const fieldErrors = normalizeFieldErrors(
-      parsed.error.flatten().fieldErrors
-    );
+    const fieldErrors = normalizeFieldErrors(parsed.error.flatten().fieldErrors);
     return jsonError(
       400,
       "VALIDATION_ERROR",
-      "Form alanlarında hatalar var.",
+      "Form alanlarinda hatalar var.",
       fieldErrors
     );
   }
 
   const metadata = parsed.data;
 
-  const pdfBuffer = Buffer.from(await pdfFile.arrayBuffer());
-  const coverBuffer = Buffer.from(await coverFile.arrayBuffer());
-
-  const variants = await generateWebpVariants(coverBuffer);
-  const coverExtension = getExtensionFromMimeType(coverFile.type);
+  const imageBuffer = Buffer.from(await rawImage.arrayBuffer());
+  const pdfBuffer = await generatePdfFromImage(imageBuffer);
+  const assets = await generateImageAssets(imageBuffer);
 
   const pdfKey = `pdf/${metadata.slug}.pdf`;
-  const coverKey = `cover/${metadata.slug}.${coverExtension}`;
+  const coverKey = `cover/${metadata.slug}.webp`;
   const thumbKeyLarge = `thumb/${metadata.slug}-800.webp`;
   const thumbKeySmall = `thumb/${metadata.slug}-400.webp`;
 
@@ -258,15 +191,15 @@ export async function POST(request: Request) {
 
     await uploadToR2({
       key: coverKey,
-      body: coverBuffer,
-      contentType: coverFile.type,
+      body: assets.cover,
+      contentType: "image/webp",
       cacheControl: IMAGE_CACHE_CONTROL
     });
     uploadedKeys.push(coverKey);
 
     await uploadToR2({
       key: thumbKeySmall,
-      body: variants.small,
+      body: assets.thumbSmall,
       contentType: "image/webp",
       cacheControl: IMAGE_CACHE_CONTROL
     });
@@ -274,42 +207,37 @@ export async function POST(request: Request) {
 
     await uploadToR2({
       key: thumbKeyLarge,
-      body: variants.large,
+      body: assets.thumbLarge,
       contentType: "image/webp",
       cacheControl: IMAGE_CACHE_CONTROL
     });
     uploadedKeys.push(thumbKeyLarge);
 
-    const categories = await prisma.category.findMany({
-      where: { slug: { in: metadata.categories } },
-      select: { id: true, slug: true }
-    });
-
-    const tags = await prisma.tag.findMany({
-      where: { slug: { in: metadata.tags } },
-      select: { id: true, slug: true }
-    });
+    const [categories, tags] = await Promise.all([
+      prisma.category.findMany({
+        where: { slug: { in: metadata.categories } },
+        select: { id: true }
+      }),
+      prisma.tag.findMany({
+        where: { slug: { in: metadata.tags } },
+        select: { id: true }
+      })
+    ]);
 
     const page = await prisma.coloringPage.create({
       data: {
         slug: metadata.slug,
         title: metadata.title,
-        description: metadata.description,
-        difficulty: metadata.difficulty,
-        orientation: metadata.orientation,
-        ageMin: metadata.ageMin,
-        ageMax: metadata.ageMax,
-        artist: metadata.artist,
-        license: metadata.license,
-        sourceUrl: metadata.sourceUrl,
-        status: metadata.status,
-        language: metadata.language,
+        description: `${metadata.title} boyama sayfasi.`,
+        orientation: "PORTRAIT",
+        status: PageStatus.PUBLISHED,
+        language: "tr",
         pdfKey,
         coverImageKey: coverKey,
         thumbWebpKey: thumbKeyLarge,
-        width: variants.width ?? metadata.width,
-        height: variants.height ?? metadata.height,
-        fileSizeBytes: metadata.fileSizeBytes ?? getBufferSize(pdfBuffer),
+        width: assets.width,
+        height: assets.height,
+        fileSizeBytes: getBufferSize(pdfBuffer),
         categories: {
           create: categories.map((category) => ({
             category: { connect: { id: category.id } }
@@ -326,24 +254,26 @@ export async function POST(request: Request) {
     revalidatePath("/");
     revalidatePath(`/sayfa/${page.slug}`);
     revalidatePath("/ara");
+    revalidatePath("/admin/pages");
+    revalidatePath("/admin/pages/new");
     metadata.categories.forEach((slug) => {
       revalidatePath(`/kategori/${slug}`);
     });
     metadata.tags.forEach((slug) => {
       revalidatePath(`/etiket/${slug}`);
     });
-    revalidatePath("/admin/pages");
 
     return NextResponse.json({ success: true, page });
   } catch (error) {
     await Promise.all(
       uploadedKeys.map((key) => deleteFromR2(key).catch(() => undefined))
     );
-    console.error("Yeni sayfa oluşturulamadı", error);
+    console.error("Yeni sayfa olusturulamadi", error);
     return jsonError(
       500,
       "PAGE_CREATE_FAILED",
-      "Sayfa oluşturulurken bir hata oluştu."
+      "Sayfa olusturulurken bir hata olustu."
     );
   }
 }
+

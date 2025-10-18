@@ -1,10 +1,5 @@
 import { unstable_cache } from "next/cache";
-import {
-  Difficulty,
-  Orientation,
-  PageStatus,
-  Prisma
-} from "@prisma/client";
+import { PageStatus, Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
 
@@ -78,27 +73,56 @@ export async function getColoringPageById(id: string) {
 
 export async function getRelatedPages(
   slug: string,
-  difficulty: Difficulty,
-  orientation: Orientation,
+  categorySlugs: string[],
+  tagSlugs: string[],
   limit = 6
 ) {
-  return cacheResult(
-    ["coloring-pages-related", slug, difficulty, orientation, String(limit)],
-    async () =>
-      prisma.coloringPage.findMany({
-        where: {
-          slug: { not: slug },
-          status: PageStatus.PUBLISHED,
-          OR: [{ difficulty }, { orientation }]
-        },
-        include: {
-          categories: { include: { category: true } },
-          tags: { include: { tag: true } }
-        },
-        take: limit,
-        orderBy: [{ downloads: "desc" }, { createdAt: "desc" }]
-      })
-  );
+  const keyParts = [
+    "coloring-pages-related",
+    slug,
+    categorySlugs.sort().join(","),
+    tagSlugs.sort().join(","),
+    String(limit)
+  ];
+
+  return cacheResult(keyParts, async () => {
+    const orConditions: Prisma.ColoringPageWhereInput[] = [];
+
+    if (categorySlugs.length > 0) {
+      orConditions.push({
+        categories: {
+          some: { category: { slug: { in: categorySlugs } } }
+        }
+      });
+    }
+
+    if (tagSlugs.length > 0) {
+      orConditions.push({
+        tags: {
+          some: { tag: { slug: { in: tagSlugs } } }
+        }
+      });
+    }
+
+    const where: Prisma.ColoringPageWhereInput = {
+      slug: { not: slug },
+      status: PageStatus.PUBLISHED
+    };
+
+    if (orConditions.length > 0) {
+      where.OR = orConditions;
+    }
+
+    return prisma.coloringPage.findMany({
+      where,
+      include: {
+        categories: { include: { category: true } },
+        tags: { include: { tag: true } }
+      },
+      take: limit,
+      orderBy: [{ downloads: "desc" }, { createdAt: "desc" }]
+    });
+  });
 }
 
 export async function getCategoriesWithCounts() {

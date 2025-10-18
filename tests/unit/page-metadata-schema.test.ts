@@ -7,11 +7,6 @@ describe("pageMetadataSchema", () => {
     const result = pageMetadataSchema.safeParse({
       title: "",
       slug: "",
-      description: "too short",
-      difficulty: "EASY",
-      orientation: "PORTRAIT",
-      status: "DRAFT",
-      language: "tr",
       categories: [],
       tags: []
     });
@@ -21,25 +16,18 @@ describe("pageMetadataSchema", () => {
       const fieldErrors = result.error.flatten().fieldErrors;
       expect(fieldErrors.title).toBeTruthy();
       expect(fieldErrors.slug).toBeTruthy();
-      expect(fieldErrors.description).toBeTruthy();
     }
   });
 
-  it("accepts a complete payload", () => {
+  it("accepts a minimal valid payload", () => {
     const result = pageMetadataSchema.safeParse({
-      title: "Valid Coloring Page",
-      slug: "valid-coloring-page",
-      description: "This description is comfortably longer than twenty chars.",
-      difficulty: "MEDIUM",
-      orientation: "LANDSCAPE",
-      status: "PUBLISHED",
-      language: "tr",
-      categories: ["animals"],
-      tags: ["forest"],
-      ageMin: 4,
-      ageMax: 8
+      title: "Orman Dostlarý",
+      slug: "orman-dostlari",
+      categories: ["hayvanlar"],
+      tags: ["orman"]
     });
 
     expect(result.success).toBe(true);
   });
 });
+

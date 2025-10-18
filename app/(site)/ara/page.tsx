@@ -29,12 +29,12 @@ export async function generateMetadata({ searchParams }: PageProps) {
   });
 
   const query = parsed.success ? parsed.data.q : undefined;
-  const suffix = query ? `“${query}” araması` : "Boyama sayfası arama";
+  const suffix = query ? `${query} aramasi` : "Boyama sayfasi arama";
 
   return buildMetadata({
     title: `${suffix} | ${siteConfig.name}`,
     description:
-      "Boyama sayfalarını zorluk, yaş, kategori ve etiket filtreleriyle keşfet.",
+      "Boyama sayfalarini kategori ve etiket filtreleriyle hizlica bul.",
     path: "/ara"
   });
 }
@@ -62,8 +62,6 @@ export default async function SearchPage({ searchParams }: PageProps) {
       q: filters.q,
       categorySlug: filters.kategori,
       tagSlug: filters.etiket,
-      difficulty: filters.difficulty,
-      orientation: filters.orientation,
       age: filters.yas,
       page: filters.sayfa
     }),
@@ -72,6 +70,11 @@ export default async function SearchPage({ searchParams }: PageProps) {
   ]);
 
   return (
-    <SearchResults filters={filters} result={results} categories={categories} tags={tags} />
+    <SearchResults
+      filters={filters}
+      result={results}
+      categories={categories}
+      tags={tags}
+    />
   );
 }

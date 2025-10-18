@@ -1,4 +1,4 @@
-ï»¿import Image from "next/image";
+import Image from "next/image";
 import Link from "next/link";
 import type { Route } from "next";
 import type {
@@ -9,7 +9,6 @@ import type {
 import { FileDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ColoringPageCard } from "@/components/cards/coloring-page-card";
 import { getPublicUrl } from "@/lib/r2";
 
@@ -31,21 +30,10 @@ type Props = {
   related: ColoringPageWithRelations[];
 };
 
-const difficultyMap: Record<string, string> = {
-  EASY: "Kolay",
-  MEDIUM: "Orta",
-  HARD: "Zor"
-};
-
-const orientationMap: Record<string, string> = {
-  PORTRAIT: "Dikey",
-  LANDSCAPE: "Yatay"
-};
-
 export function ColoringPageDetail({ page, related }: Props) {
   const imageLarge = getPublicUrl(page.thumbWebpKey);
   const imageSmall = imageLarge.replace("-800.webp", "-400.webp");
-  const pdfRoute = `/api/download/${page.slug}` as Route;
+  const pdfRoute = /api/download/ as Route;
 
   return (
     <section className="container py-12">
@@ -63,42 +51,18 @@ export function ColoringPageDetail({ page, related }: Props) {
         </div>
         <div className="flex flex-col justify-between gap-8 rounded-3xl border border-brand-dark/10 bg-white/90 p-8 shadow-card">
           <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <Badge>{difficultyMap[page.difficulty]}</Badge>
-              <Badge variant="outline">{orientationMap[page.orientation]}</Badge>
-              {page.ageMin !== null && page.ageMax !== null ? (
-                <Badge variant="outline">
-                  {page.ageMin}-{page.ageMax} yaÅŸ
-                </Badge>
-              ) : null}
-            </div>
             <h1 className="text-3xl font-semibold text-brand-dark">
               {page.title}
             </h1>
             <p className="text-brand-dark/70">{page.description}</p>
             <dl className="grid gap-2 text-sm text-brand-dark/70">
-              {page.artist ? (
-                <div className="flex gap-2">
-                  <dt className="min-w-[120px] font-medium text-brand-dark">
-                    Ã‡izer
-                  </dt>
-                  <dd>{page.artist}</dd>
-                </div>
-              ) : null}
-              {page.license ? (
-                <div className="flex gap-2">
-                  <dt className="min-w-[120px] font-medium text-brand-dark">
-                    Lisans
-                  </dt>
-                  <dd>{page.license}</dd>
-                </div>
-              ) : null}
               <div className="flex gap-2">
                 <dt className="min-w-[120px] font-medium text-brand-dark">
                   Boyut
                 </dt>
                 <dd>
-                  {page.width ?? "?"}x{page.height ?? "?"} px Â·{" "}
+                  {page.width ?? "?"}x{page.height ?? "?"} px •
+                  {" "}
                   {Math.round((page.fileSizeBytes ?? 0) / 1024)} KB
                 </dd>
               </div>
@@ -110,7 +74,7 @@ export function ColoringPageDetail({ page, related }: Props) {
                   {page.categories.map((category) => (
                     <Link
                       key={category.category.id}
-                      href={`/kategori/${category.category.slug}` as Route}
+                      href={/kategori/ as Route}
                       className="rounded-full border border-brand-dark/20 px-3 py-1 text-xs text-brand-dark/70 transition hover:border-brand-dark/40 hover:text-brand-dark"
                     >
                       {category.category.name}
@@ -126,7 +90,7 @@ export function ColoringPageDetail({ page, related }: Props) {
                   {page.tags.map((tag) => (
                     <Link
                       key={tag.tag.id}
-                      href={`/etiket/${tag.tag.slug}` as Route}
+                      href={/etiket/ as Route}
                       className="rounded-full bg-brand-light px-3 py-1 text-xs text-brand-dark/70 transition hover:bg-brand"
                     >
                       #{tag.tag.name}
@@ -144,7 +108,7 @@ export function ColoringPageDetail({ page, related }: Props) {
               </Link>
             </Button>
             <p className="text-xs text-brand-dark/60">
-              Ä°ndirme linki Cloudflare R2 ile gÃ¼venli ÅŸekilde yÃ¶nlendirilir.
+              Ýndirme linki Cloudflare R2 ile güvenli þekilde yönlendirilir.
             </p>
           </div>
         </div>
@@ -153,7 +117,7 @@ export function ColoringPageDetail({ page, related }: Props) {
       {related.length > 0 ? (
         <div className="mt-16">
           <h2 className="text-2xl font-semibold text-brand-dark">
-            Benzer boyama sayfalarÄ±
+            Benzer boyama sayfalarý
           </h2>
           <div className="mt-6 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {related.slice(0, 3).map((pageItem) => (

@@ -1,34 +1,71 @@
 import sharp from "sharp";
 
-export type WebpVariants = {
-  small: Buffer;
-  large: Buffer;
-  width?: number;
-  height?: number;
+export type ImageAssets = {
+  cover: Buffer;
+  thumbLarge: Buffer;
+  thumbSmall: Buffer;
+  width: number;
+  height: number;
 };
 
-export async function generateWebpVariants(buffer: Buffer): Promise<WebpVariants> {
-  const instance = sharp(buffer);
-  const metadata = await instance.metadata();
+export async function generateImageAssets(buffer: Buffer): Promise<ImageAssets> {
+  const portraitBase = sharp(buffer).rotate();
 
-  const small = await instance
+  const coverBuffer = await portraitBase
     .clone()
-    .resize({ width: 400, withoutEnlargement: true })
-    .webp({ quality: 80 })
+    .resize({
+      width: 1600,
+      height: 2260,
+      fit: "contain",
+      background: { r: 255, g: 255, b: 255, alpha: 1 }
+    })
+    .webp({ quality: 90 })
     .toBuffer();
 
-  const large = await instance
+  const coverMeta = await sharp(coverBuffer).metadata();
+
+  const thumbLarge = await sharp(coverBuffer)
     .clone()
-    .resize({ width: 800, withoutEnlargement: true })
+    .resize({
+      width: 800,
+      height: 1130,
+      fit: "inside",
+      withoutEnlargement: true
+    })
     .webp({ quality: 85 })
     .toBuffer();
 
+  const thumbSmall = await sharp(coverBuffer)
+    .clone()
+    .resize({
+      width: 400,
+      height: 566,
+      fit: "inside",
+      withoutEnlargement: true
+    })
+    .webp({ quality: 80 })
+    .toBuffer();
+
   return {
-    small,
-    large,
-    width: metadata.width,
-    height: metadata.height
+    cover: coverBuffer,
+    thumbLarge,
+    thumbSmall,
+    width: coverMeta.width ?? 0,
+    height: coverMeta.height ?? 0
   };
+}
+
+export async function generatePdfFromImage(buffer: Buffer): Promise<Buffer> {
+  return sharp(buffer)
+    .rotate()
+    .resize({
+      width: 2480,
+      height: 3508,
+      fit: "contain",
+      background: { r: 255, g: 255, b: 255, alpha: 1 }
+    })
+    .toFormat("pdf")
+    .toBuffer();
 }
 
 export function getBufferSize(buffer: Buffer): number {

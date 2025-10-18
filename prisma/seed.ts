@@ -1,10 +1,4 @@
-﻿
-import {
-  Difficulty,
-  Orientation,
-  PageStatus,
-  PrismaClient
-} from "@prisma/client";
+import { PageStatus, PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -14,7 +8,7 @@ async function main() {
 
   if (!adminEmail || !adminPasswordHash) {
     throw new Error(
-      "Seeding requires ADMIN_EMAIL ve ADMIN_PASSWORD_HASH deÄŸiÅŸkenleri."
+      "Seeding requires ADMIN_EMAIL ve ADMIN_PASSWORD_HASH de�i�kenleri."
     );
   }
 
@@ -76,67 +70,46 @@ async function main() {
   const pageSeed = [
     {
       slug: "sevimli-orman-arkadaslari",
-      title: "Sevimli Orman ArkadaÅŸlarÄ±",
-      description:
-        "Minikler iÃ§in dost canlÄ±sÄ± orman hayvanlarÄ±yla dolu eÄŸlenceli bir boyama sayfasÄ±.",
-      difficulty: Difficulty.EASY,
-      orientation: Orientation.LANDSCAPE,
-      ageMin: 3,
-      ageMax: 6,
-      artist: "Boyama StÃ¼dyosu",
-      license: "CC BY 4.0",
-      sourceUrl: "https://boyamasayfalari.com.tr/sevimli-orman-arkadaslari",
+      title: "Sevimli Orman Arkadaslari",
+      description: "Sevimli Orman Arkadaslari boyama sayfas�.",
       status: PageStatus.PUBLISHED,
+      language: "tr",
       pdfKey: "pdf/sevimli-orman-arkadaslari.pdf",
-      coverImageKey: "cover/sevimli-orman-arkadaslari.jpg",
-      thumbWebpKey: "thumb/sevimli-orman-arkadaslari-400.webp",
-      width: 2480,
-      height: 1754,
-      fileSizeBytes: 1856320,
+      coverImageKey: "cover/sevimli-orman-arkadaslari.webp",
+      thumbWebpKey: "thumb/sevimli-orman-arkadaslari-800.webp",
+      width: 1600,
+      height: 2260,
+      fileSizeBytes: 1024,
       categories: ["hayvanlar"],
       tags: ["orman", "karakter"]
     },
     {
       slug: "uzay-kesifcileri",
-      title: "Uzay KeÅŸifÃ§ileri",
-      description:
-        "Renkli gezegenler ve sevimli astronotlarla dolu bu sayfada hayal gÃ¼cÃ¼ sÄ±nÄ±rsÄ±z.",
-      difficulty: Difficulty.MEDIUM,
-      orientation: Orientation.PORTRAIT,
-      ageMin: 5,
-      ageMax: 9,
-      artist: "Galaksi Ã‡izeri",
-      license: "Ã–zel KullanÄ±m",
-      sourceUrl: "https://boyamasayfalari.com.tr/uzay-kesifcileri",
+      title: "Uzay Kesifcileri",
+      description: "Uzay Kesifcileri boyama sayfas�.",
       status: PageStatus.PUBLISHED,
+      language: "tr",
       pdfKey: "pdf/uzay-kesifcileri.pdf",
-      coverImageKey: "cover/uzay-kesifcileri.jpg",
-      thumbWebpKey: "thumb/uzay-kesifcileri-400.webp",
-      width: 2480,
-      height: 3508,
-      fileSizeBytes: 2540032,
+      coverImageKey: "cover/uzay-kesifcileri.webp",
+      thumbWebpKey: "thumb/uzay-kesifcileri-800.webp",
+      width: 1600,
+      height: 2260,
+      fileSizeBytes: 1024,
       categories: ["uzay"],
       tags: ["gezegen"]
     },
     {
       slug: "peri-masali-satosu",
-      title: "Peri MasalÄ± Åatosu",
-      description:
-        "IÅŸÄ±ltÄ±lÄ± peri tozlarÄ± ve bÃ¼yÃ¼lÃ¼ bir ÅŸato ile Ã§ocuklarÄ±n yaratÄ±cÄ±lÄ±ÄŸÄ±nÄ± destekleyin.",
-      difficulty: Difficulty.HARD,
-      orientation: Orientation.PORTRAIT,
-      ageMin: 6,
-      ageMax: 10,
-      artist: "Masal AtÃ¶lyesi",
-      license: "CC BY-NC 4.0",
-      sourceUrl: "https://boyamasayfalari.com.tr/peri-masali-satosu",
+      title: "Peri Masali Satosu",
+      description: "Peri Masali Satosu boyama sayfas�.",
       status: PageStatus.PUBLISHED,
+      language: "tr",
       pdfKey: "pdf/peri-masali-satosu.pdf",
-      coverImageKey: "cover/peri-masali-satosu.jpg",
-      thumbWebpKey: "thumb/peri-masali-satosu-400.webp",
-      width: 2480,
-      height: 3508,
-      fileSizeBytes: 3120000,
+      coverImageKey: "cover/peri-masali-satosu.webp",
+      thumbWebpKey: "thumb/peri-masali-satosu-800.webp",
+      width: 1600,
+      height: 2260,
+      fileSizeBytes: 1024,
       categories: ["masallar"],
       tags: ["fantastik", "karakter"]
     }
@@ -148,15 +121,8 @@ async function main() {
       update: {
         title: page.title,
         description: page.description,
-        difficulty: page.difficulty,
-        orientation: page.orientation,
-        ageMin: page.ageMin,
-        ageMax: page.ageMax,
-        artist: page.artist,
-        license: page.license,
-        sourceUrl: page.sourceUrl,
         status: page.status,
-        language: "tr",
+        language: page.language,
         pdfKey: page.pdfKey,
         coverImageKey: page.coverImageKey,
         thumbWebpKey: page.thumbWebpKey,
@@ -182,15 +148,8 @@ async function main() {
         slug: page.slug,
         title: page.title,
         description: page.description,
-        difficulty: page.difficulty,
-        orientation: page.orientation,
-        ageMin: page.ageMin,
-        ageMax: page.ageMax,
-        artist: page.artist,
-        license: page.license,
-        sourceUrl: page.sourceUrl,
         status: page.status,
-        language: "tr",
+        language: page.language,
         pdfKey: page.pdfKey,
         coverImageKey: page.coverImageKey,
         thumbWebpKey: page.thumbWebpKey,
@@ -213,14 +172,15 @@ async function main() {
     });
   }
 
-  console.log("Seed verisi baÅŸarÄ±yla yÃ¼klendi.");
+  console.log("Seed verisi ba�ar�yla y�klendi.");
 }
 
 main()
   .catch((error) => {
-    console.error("Seed iÅŸlemi baÅŸarÄ±sÄ±z:", error);
+    console.error("Seed i�lemi ba�ar�s�z:", error);
     process.exitCode = 1;
   })
   .finally(async () => {
     await prisma.$disconnect();
   });
+

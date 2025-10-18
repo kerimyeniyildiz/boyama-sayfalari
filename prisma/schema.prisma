@@ -12,8 +12,7 @@ model ColoringPage {
   slug           String      @unique
   title          String
   description    String
-  difficulty     Difficulty
-  orientation    Orientation
+  orientation    Orientation  @default(PORTRAIT)
   ageMin         Int?
   ageMax         Int?
   artist         String?
@@ -97,12 +96,6 @@ model DownloadEvent {
   createdAt DateTime @default(now())
 
   @@index([pageId, createdAt])
-}
-
-enum Difficulty {
-  EASY
-  MEDIUM
-  HARD
 }
 
 enum Orientation {

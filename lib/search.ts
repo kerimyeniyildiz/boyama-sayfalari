@@ -1,9 +1,4 @@
-import {
-  Difficulty,
-  Orientation,
-  PageStatus,
-  Prisma
-} from "@prisma/client";
+import { PageStatus, Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
 
@@ -11,8 +6,6 @@ export type SearchFilters = {
   q?: string;
   categorySlug?: string;
   tagSlug?: string;
-  difficulty?: Difficulty;
-  orientation?: Orientation;
   age?: number;
   page?: number;
   pageSize?: number;
@@ -37,21 +30,9 @@ export async function searchColoringPages(filters: SearchFilters) {
     rankSql = Prisma.sql`ts_rank(cp."searchVector", plainto_tsquery('turkish', ${query})) AS rank`;
   }
 
-  if (filters.difficulty) {
-    conditions.push(
-      Prisma.sql`cp."difficulty" = ${filters.difficulty}`
-    );
-  }
-
-  if (filters.orientation) {
-    conditions.push(
-      Prisma.sql`cp."orientation" = ${filters.orientation}`
-    );
-  }
-
   if (filters.age !== undefined) {
     conditions.push(
-      Prisma.sql`( (cp."ageMin" IS NULL OR cp."ageMin" <= ${filters.age}) AND (cp."ageMax" IS NULL OR cp."ageMax" >= ${filters.age}) )`
+      Prisma.sql`((cp."ageMin" IS NULL OR cp."ageMin" <= ${filters.age}) AND (cp."ageMax" IS NULL OR cp."ageMax" >= ${filters.age}))`
     );
   }
 
@@ -77,7 +58,7 @@ export async function searchColoringPages(filters: SearchFilters) {
 
   const whereClause =
     conditions.length > 0
-      ? Prisma.sql`WHERE ${Prisma.join(conditions, " AND ")}`
+      ? Prisma.sql`WHERE ${Prisma.join(conditions, Prisma.sql` AND `)}`
       : Prisma.empty;
 
   const orderClause = filters.q
@@ -123,10 +104,10 @@ export async function searchColoringPages(filters: SearchFilters) {
     }
   });
 
-  const byId = new Map(pages.map((page) => [page.id, page]));
+  const byId = new Map(pages.map((entry) => [entry.id, entry]));
   const sorted = ids
     .map((id) => byId.get(id))
-    .filter((page): page is NonNullable<typeof page> => Boolean(page));
+    .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
 
   return {
     results: sorted,
