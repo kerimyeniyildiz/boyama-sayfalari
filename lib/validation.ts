@@ -67,3 +67,21 @@ export const searchParamsSchema = z.object({
     .optional(),
   sayfa: z.coerce.number().int().min(1).default(1)
 });
+
+export const adminPageListQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(5).max(50).default(20),
+  status: z.enum(["ALL", "PUBLISHED", "DRAFT"]).default("ALL"),
+  query: z.preprocess(
+    (value) => {
+      if (typeof value !== "string") {
+        return undefined;
+      }
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? trimmed : undefined;
+    },
+    z.string().max(100).optional()
+  )
+});
+
+export type AdminPageListQuery = z.infer<typeof adminPageListQuerySchema>;

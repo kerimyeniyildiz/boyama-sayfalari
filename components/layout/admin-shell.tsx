@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import type { Route } from "next";
 import {
   FilePlus,
+  FileText,
   LayoutDashboard,
   LogOut,
   type LucideIcon
@@ -20,6 +21,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { href: "/admin", label: "Yönetim Paneli", icon: LayoutDashboard },
+  { href: "/admin/pages", label: "Sayfalar", icon: FileText },
   { href: "/admin/pages/new", label: "Yeni Sayfa", icon: FilePlus }
 ];
 
@@ -50,10 +52,21 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       <div className="container flex flex-col gap-10 py-10 lg:flex-row">
         <nav className="flex w-full flex-row gap-3 overflow-auto rounded-2xl border border-brand-dark/10 bg-white p-3 shadow-card lg:h-fit lg:w-64 lg:flex-col">
           {navItems.map((item) => {
-            const isActive =
-              item.href === "/admin"
-                ? pathname === "/admin"
-                : pathname.startsWith(item.href);
+            let isActive = false;
+
+            if (item.href === "/admin") {
+              isActive = pathname === "/admin";
+            } else if (item.href === "/admin/pages/new") {
+              isActive = pathname === "/admin/pages/new";
+            } else if (item.href === "/admin/pages") {
+              isActive =
+                pathname === "/admin/pages" ||
+                (pathname.startsWith("/admin/pages/") &&
+                  !pathname.startsWith("/admin/pages/new"));
+            } else {
+              isActive =
+                pathname === item.href || pathname.startsWith(`${item.href}/`);
+            }
 
             const Icon = item.icon;
 

@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { ZodError } from "zod";
 
 import { prisma } from "@/lib/db";
 import { pageMetadataSchema } from "@/lib/validation";
 import { slugify } from "@/lib/slug";
 import { generateWebpVariants, getBufferSize } from "@/lib/images";
 import { uploadToR2, deleteFromR2 } from "@/lib/r2";
+import {
+  getAdminPages,
+  parseAdminPageListFilters
+} from "@/lib/data/admin/pages";
 
 export const runtime = "nodejs";
 
@@ -56,6 +61,39 @@ function getExtensionFromMimeType(mimeType: string): string {
   if (mimeType === "image/webp") return "webp";
   if (mimeType === "image/svg+xml") return "svg";
   return mimeType.split("/")[1] ?? "jpg";
+}
+
+export async function GET(request: Request) {
+  try {
+    const url = new URL(request.url);
+    const filters = parseAdminPageListFilters(
+      Object.fromEntries(url.searchParams.entries())
+    );
+    const result = await getAdminPages(filters);
+
+    return NextResponse.json({
+      data: result.items,
+      pagination: result.pagination,
+      filters: result.filters
+    });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      const fieldErrors = error.flatten().fieldErrors;
+      return jsonError(
+        400,
+        "INVALID_QUERY",
+        "Geçersiz filtre parametreleri.",
+        fieldErrors
+      );
+    }
+
+    console.error("Admin page listesi getirilirken hata oluştu", error);
+    return jsonError(
+      500,
+      "PAGE_LIST_FAILED",
+      "Sayfalar yüklenirken bir hata oluştu."
+    );
+  }
 }
 
 export async function POST(request: Request) {
