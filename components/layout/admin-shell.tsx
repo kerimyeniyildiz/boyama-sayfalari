@@ -6,8 +6,10 @@ import type { Route } from "next";
 import {
   FilePlus,
   FileText,
+  Folder,
   LayoutDashboard,
   LogOut,
+  Tag,
   type LucideIcon
 } from "lucide-react";
 
@@ -22,7 +24,9 @@ type NavItem = {
 const navItems: NavItem[] = [
   { href: "/admin", label: "Yönetim Paneli", icon: LayoutDashboard },
   { href: "/admin/pages", label: "Sayfalar", icon: FileText },
-  { href: "/admin/pages/new", label: "Yeni Sayfa", icon: FilePlus }
+  { href: "/admin/pages/new", label: "Yeni Sayfa", icon: FilePlus },
+  { href: "/admin/categories", label: "Kategoriler", icon: Folder },
+  { href: "/admin/tags", label: "Etiketler", icon: Tag }
 ];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
@@ -63,6 +67,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 pathname === "/admin/pages" ||
                 (pathname.startsWith("/admin/pages/") &&
                   !pathname.startsWith("/admin/pages/new"));
+            } else if (item.href === "/admin/categories") {
+              isActive =
+                pathname === "/admin/categories" ||
+                pathname.startsWith("/admin/categories/");
+            } else if (item.href === "/admin/tags") {
+              isActive =
+                pathname === "/admin/tags" ||
+                pathname.startsWith("/admin/tags/");
             } else {
               isActive =
                 pathname === item.href || pathname.startsWith(`${item.href}/`);
