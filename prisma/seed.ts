@@ -8,7 +8,7 @@ async function main() {
 
   if (!adminEmail || !adminPasswordHash) {
     throw new Error(
-      "Seeding requires ADMIN_EMAIL ve ADMIN_PASSWORD_HASH de�i�kenleri."
+      "Seeding requires ADMIN_EMAIL ve ADMIN_PASSWORD_HASH değişkenleri."
     );
   }
 
@@ -70,8 +70,8 @@ async function main() {
   const pageSeed = [
     {
       slug: "sevimli-orman-arkadaslari",
-      title: "Sevimli Orman Arkadaslari",
-      description: "Sevimli Orman Arkadaslari boyama sayfas�.",
+      title: "Sevimli Orman Arkadaşları",
+      description: "Sevimli Orman Arkadaşları boyama sayfası.",
       status: PageStatus.PUBLISHED,
       language: "tr",
       pdfKey: "pdf/sevimli-orman-arkadaslari.pdf",
@@ -85,8 +85,8 @@ async function main() {
     },
     {
       slug: "uzay-kesifcileri",
-      title: "Uzay Kesifcileri",
-      description: "Uzay Kesifcileri boyama sayfas�.",
+      title: "Uzay Keşifçileri",
+      description: "Uzay Keşifçileri boyama sayfası.",
       status: PageStatus.PUBLISHED,
       language: "tr",
       pdfKey: "pdf/uzay-kesifcileri.pdf",
@@ -100,8 +100,8 @@ async function main() {
     },
     {
       slug: "peri-masali-satosu",
-      title: "Peri Masali Satosu",
-      description: "Peri Masali Satosu boyama sayfas�.",
+      title: "Peri Masalı Şatosu",
+      description: "Peri Masalı Şatosu boyama sayfası.",
       status: PageStatus.PUBLISHED,
       language: "tr",
       pdfKey: "pdf/peri-masali-satosu.pdf",
@@ -172,12 +172,12 @@ async function main() {
     });
   }
 
-  console.log("Seed verisi ba�ar�yla y�klendi.");
+  console.log("Seed verisi başarıyla yüklendi.");
 }
 
 main()
   .catch((error) => {
-    console.error("Seed i�lemi ba�ar�s�z:", error);
+    console.error("Seed işlemi başarısız:", error);
     process.exitCode = 1;
   })
   .finally(async () => {

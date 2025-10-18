@@ -1,4 +1,4 @@
-﻿import type { MetadataRoute } from "next";
+import type { MetadataRoute } from "next";
 
 import { prisma } from "@/lib/db";
 import { siteConfig } from "@/lib/seo";
