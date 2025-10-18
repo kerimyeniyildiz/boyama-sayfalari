@@ -130,7 +130,7 @@ export function ColoringPageDetail({ page, related }: Props) {
               <div className="flex gap-2">
                 <dt className="min-w-[120px] font-medium text-brand-dark">Boyut</dt>
                 <dd>
-                  {primary.width ?? "?"}x{primary.height ?? "?"} px · {Math.round((primary.fileSizeBytes ?? 0) / 1024)} KB
+                  {primary.width ?? "?"}x{primary.height ?? "?"} px  {Math.round((primary.fileSizeBytes ?? 0) / 1024)} KB
                 </dd>
               </div>
               <div className="flex gap-2">
@@ -171,12 +171,12 @@ export function ColoringPageDetail({ page, related }: Props) {
               </Link>
             </Button>
             <p className="text-xs text-brand-dark/60">
-              Ýndirme linkleri Cloudflare R2 ile güvenli þekilde yönlendirilir.
+              ndirme linkleri Cloudflare R2 ile gvenli ekilde ynlendirilir.
             </p>
             {others.length > 0 ? (
               <div className="space-y-2">
                 <p className="text-xs font-medium text-brand-dark">
-                  Diðer PDF seçenekleri
+                  Dier PDF seenekleri
                 </p>
                 <div className="grid gap-2">
                   {others.map((asset, index) => (
@@ -197,7 +197,7 @@ export function ColoringPageDetail({ page, related }: Props) {
       {others.length > 0 ? (
         <div className="mt-16 space-y-6">
           <h2 className="text-2xl font-semibold text-brand-dark">
-            Ek boyama görselleri
+            Ek boyama grselleri
           </h2>
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {others.map((asset) => {
@@ -212,7 +212,7 @@ export function ColoringPageDetail({ page, related }: Props) {
                   <div className="relative aspect-[3/4] overflow-hidden rounded-xl bg-brand-light">
                     <Image
                       src={imageUrl}
-                      alt={`${page.title} görseli`}
+                      alt={`${page.title} grseli`}
                       fill
                       sizes="(max-width: 768px) 100vw, 33vw"
                       className="object-contain"
@@ -231,7 +231,7 @@ export function ColoringPageDetail({ page, related }: Props) {
       {related.length > 0 ? (
         <div className="mt-16">
           <h2 className="text-2xl font-semibold text-brand-dark">
-            Benzer boyama sayfalarý
+            Benzer boyama sayfalar
           </h2>
           <div className="mt-6 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {related.slice(0, 3).map((pageItem) => (

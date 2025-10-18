@@ -22,7 +22,7 @@ export async function GET(
 
   if (!page) {
     return NextResponse.json(
-      { error: "Boyama sayfası bulunamadı." },
+      { error: "Boyama sayfasÄ± bulunamadÄ±." },
       { status: 404 }
     );
   }
@@ -34,7 +34,7 @@ export async function GET(
     const assetIndex = page.assets.findIndex((asset) => asset.id === assetId);
     if (assetIndex === -1) {
       return NextResponse.json(
-        { error: "İstenen görsel bulunamadı." },
+        { error: "Ä°stenen gÃ¶rsel bulunamadÄ±." },
         { status: 404 }
       );
     }
