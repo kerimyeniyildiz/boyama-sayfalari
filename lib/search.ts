@@ -1,4 +1,4 @@
-﻿import { PageStatus, Prisma } from "@prisma/client";
+import { PageStatus, Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
 
@@ -58,7 +58,7 @@ export async function searchColoringPages(filters: SearchFilters) {
 
   let whereClause: Prisma.Sql;
   if (conditions.length > 0) {
-    whereClause = Prisma.sql`WHERE ${Prisma.join(conditions, Prisma.sql` AND `)}`;
+    whereClause = Prisma.sql`WHERE ${Prisma.join(conditions, " AND ")}`;
   } else {
     whereClause = Prisma.sql``;
   }
@@ -118,3 +118,4 @@ export async function searchColoringPages(filters: SearchFilters) {
     pageSize
   };
 }
+
