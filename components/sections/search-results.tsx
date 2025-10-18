@@ -1,30 +1,13 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { notFound } from "next/navigation";
-import type {
-  ColoringPage,
-  ColoringPageCategory,
-  ColoringPageTag
-} from "@prisma/client";
 import { Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { ColoringPageCard } from "@/components/cards/coloring-page-card";
-
-type ColoringPageWithRelations = ColoringPage & {
-  categories: Array<
-    ColoringPageCategory & {
-      category: { id: string; name: string; slug: string };
-    }
-  >;
-  tags: Array<
-    ColoringPageTag & {
-      tag: { id: string; name: string; slug: string };
-    }
-  >;
-};
+import type { ColoringPageWithRelations } from "@/lib/data/coloring-pages";
 
 type Category = {
   id: string;

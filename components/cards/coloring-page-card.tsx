@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type {
   ColoringPage,
+  ColoringPageAsset,
   ColoringPageCategory,
   ColoringPageTag
 } from "@prisma/client";
@@ -23,6 +24,7 @@ type ColoringPageWithRelations = ColoringPage & {
       tag: { id: string; name: string; slug: string };
     }
   >;
+  assets: Array<ColoringPageAsset>;
 };
 
 type ColoringPageCardProps = {
@@ -36,14 +38,31 @@ export function ColoringPageCard({
   priority,
   className
 }: ColoringPageCardProps) {
-  const hasThumbKey = Boolean(page.thumbWebpKey);
+  const sortedAssets = page.assets
+    .slice()
+    .sort((a, b) => a.position - b.position);
+  const fallbackAsset = sortedAssets[0];
+
+  const rawThumbLargeKey =
+    page.thumbWebpKey ||
+    fallbackAsset?.thumbLargeKey ||
+    fallbackAsset?.coverImageKey ||
+    null;
+
+  let rawThumbSmallKey: string | null = null;
+  if (page.thumbWebpKey && page.thumbWebpKey.includes("-800.")) {
+    rawThumbSmallKey = page.thumbWebpKey.replace("-800.", "-400.");
+  } else if (fallbackAsset?.thumbSmallKey) {
+    rawThumbSmallKey = fallbackAsset.thumbSmallKey;
+  }
+
+  const hasThumbKey = Boolean(rawThumbLargeKey);
   const thumbLargeUrl = hasThumbKey
-    ? getPublicUrl(page.thumbWebpKey)
+    ? getPublicUrl(rawThumbLargeKey!)
     : FALLBACK_BLUR_DATA_URL;
-  const blurDataURL =
-    hasThumbKey && page.thumbWebpKey.includes("-400.")
-      ? getPublicUrl(page.thumbWebpKey)
-      : FALLBACK_BLUR_DATA_URL;
+  const blurDataURL = rawThumbSmallKey
+    ? getPublicUrl(rawThumbSmallKey)
+    : FALLBACK_BLUR_DATA_URL;
 
   return (
     <Card className={cn("h-full overflow-hidden", className)}>

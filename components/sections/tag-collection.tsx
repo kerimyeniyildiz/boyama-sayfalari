@@ -1,27 +1,10 @@
-import type {
-  ColoringPage,
-  ColoringPageCategory,
-  ColoringPageTag,
-  Tag
-} from "@prisma/client";
+import type { Tag } from "@prisma/client";
 
 import { ColoringPageCard } from "@/components/cards/coloring-page-card";
+import type { ColoringPageWithRelations } from "@/lib/data/coloring-pages";
 
 type TagWithPages = Tag & {
-  pages: Array<
-    ColoringPage & {
-      categories: Array<
-        ColoringPageCategory & {
-          category: { id: string; name: string; slug: string };
-        }
-      >;
-      tags: Array<
-        ColoringPageTag & {
-          tag: { id: string; name: string; slug: string };
-        }
-      >;
-    }
-  >;
+  pages: ColoringPageWithRelations[];
 };
 
 type TagCollectionProps = {

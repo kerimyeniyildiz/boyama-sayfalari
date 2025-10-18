@@ -73,7 +73,10 @@ export async function PUT(
     where: { id: params.id },
     include: {
       categories: { include: { category: true } },
-      tags: { include: { tag: true } }
+      tags: { include: { tag: true } },
+      assets: {
+        orderBy: { position: "asc" }
+      }
     }
   });
 
@@ -84,6 +87,9 @@ export async function PUT(
   const imageFile = (formData.get("image") ?? formData.get("cover")) as
     | File
     | null;
+  const extraImages = formData
+    .getAll("images")
+    .filter((value): value is File => value instanceof File && value.size > 0);
 
   const title = toString(formData.get("title")) || existingPage.title;
   const rawSlug = toString(formData.get("slug"));
@@ -126,6 +132,32 @@ export async function PUT(
       }
     );
   }
+
+  for (const image of extraImages) {
+    if (!ALLOWED_IMAGE_TYPES.has(image.type)) {
+      return jsonFieldError(
+        400,
+        "INVALID_IMAGE_TYPE",
+        "Görsel yalnızca PNG, JPEG, SVG veya WebP formatında olabilir.",
+        {
+          image: ["Görsel yalnızca PNG, JPEG, SVG veya WebP formatında olabilir."]
+        }
+      );
+    }
+
+    if (image.size > MAX_IMAGE_SIZE) {
+      return jsonFieldError(
+        400,
+        "IMAGE_TOO_LARGE",
+        `Görsel ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sınırını aşıyor.`,
+        {
+          image: [`Görsel ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sınırını aşıyor.`]
+        }
+      );
+    }
+  }
+
+  const existingAssetCount = existingPage.assets.length;
 
   let newPdfBuffer: Buffer | null = null;
   let newAssets: Awaited<ReturnType<typeof generateImageAssets>> | null = null;
@@ -173,19 +205,31 @@ export async function PUT(
 
   const uploadedKeys: string[] = [];
   const keysToDelete: string[] = [];
+  const extraAssetRecords: Array<
+    {
+      pdfKey: string;
+      coverImageKey: string;
+      thumbLargeKey: string;
+      thumbSmallKey: string;
+      width: number;
+      height: number;
+      fileSizeBytes: number;
+      position: number;
+    }
+  > = [];
 
   if (newPdfBuffer && newAssets) {
     keysToDelete.push(
       existingPage.pdfKey,
       existingPage.coverImageKey,
       existingPage.thumbWebpKey,
-      existingPage.thumbWebpKey.replace("-800.webp", "-400.webp")
+      existingPage.thumbWebpKey.replace('-800.webp', '-400.webp')
     );
 
     await uploadToR2({
       key: pdfKey,
       body: newPdfBuffer,
-      contentType: "application/pdf",
+      contentType: 'application/pdf',
       cacheControl: PDF_CACHE_CONTROL
     });
     uploadedKeys.push(pdfKey);
@@ -193,7 +237,7 @@ export async function PUT(
     await uploadToR2({
       key: coverKey,
       body: newAssets.cover,
-      contentType: "image/webp",
+      contentType: 'image/webp',
       cacheControl: IMAGE_CACHE_CONTROL
     });
     uploadedKeys.push(coverKey);
@@ -201,7 +245,7 @@ export async function PUT(
     await uploadToR2({
       key: thumbKeySmall,
       body: newAssets.thumbSmall,
-      contentType: "image/webp",
+      contentType: 'image/webp',
       cacheControl: IMAGE_CACHE_CONTROL
     });
     uploadedKeys.push(thumbKeySmall);
@@ -209,10 +253,66 @@ export async function PUT(
     await uploadToR2({
       key: thumbKeyLarge,
       body: newAssets.thumbLarge,
-      contentType: "image/webp",
+      contentType: 'image/webp',
       cacheControl: IMAGE_CACHE_CONTROL
     });
     uploadedKeys.push(thumbKeyLarge);
+  }
+
+  for (let index = 0; index < extraImages.length; index += 1) {
+    const file = extraImages[index];
+    const extraBuffer = Buffer.from(await file.arrayBuffer());
+    const extraPdfBuffer = await generatePdfFromImage(extraBuffer);
+    const extraAssets = await generateImageAssets(extraBuffer);
+
+    const suffix = existingAssetCount + index + 2;
+    const extraPdfKey = 'pdf/' + metadata.slug + '-' + suffix + '.pdf';
+    const extraCoverKey = 'cover/' + metadata.slug + '-' + suffix + '.webp';
+    const extraThumbSmallKey = 'thumb/' + metadata.slug + '-' + suffix + '-400.webp';
+    const extraThumbLargeKey = 'thumb/' + metadata.slug + '-' + suffix + '-800.webp';
+
+    await uploadToR2({
+      key: extraPdfKey,
+      body: extraPdfBuffer,
+      contentType: 'application/pdf',
+      cacheControl: PDF_CACHE_CONTROL
+    });
+    uploadedKeys.push(extraPdfKey);
+
+    await uploadToR2({
+      key: extraCoverKey,
+      body: extraAssets.cover,
+      contentType: 'image/webp',
+      cacheControl: IMAGE_CACHE_CONTROL
+    });
+    uploadedKeys.push(extraCoverKey);
+
+    await uploadToR2({
+      key: extraThumbSmallKey,
+      body: extraAssets.thumbSmall,
+      contentType: 'image/webp',
+      cacheControl: IMAGE_CACHE_CONTROL
+    });
+    uploadedKeys.push(extraThumbSmallKey);
+
+    await uploadToR2({
+      key: extraThumbLargeKey,
+      body: extraAssets.thumbLarge,
+      contentType: 'image/webp',
+      cacheControl: IMAGE_CACHE_CONTROL
+    });
+    uploadedKeys.push(extraThumbLargeKey);
+
+    extraAssetRecords.push({
+      pdfKey: extraPdfKey,
+      coverImageKey: extraCoverKey,
+      thumbLargeKey: extraThumbLargeKey,
+      thumbSmallKey: extraThumbSmallKey,
+      width: extraAssets.width,
+      height: extraAssets.height,
+      fileSizeBytes: getBufferSize(extraPdfBuffer),
+      position: existingAssetCount + index + 1
+    });
   }
 
   try {
@@ -254,7 +354,14 @@ export async function PUT(
           create: tags.map((tag) => ({
             tag: { connect: { id: tag.id } }
           }))
-        }
+        },
+        ...(extraAssetRecords.length > 0
+          ? {
+              assets: {
+                create: extraAssetRecords
+              }
+            }
+          : {})
       }
     });
 
@@ -300,7 +407,8 @@ export async function DELETE(
     where: { id: params.id },
     include: {
       categories: { include: { category: { select: { slug: true } } } },
-      tags: { include: { tag: { select: { slug: true } } } }
+      tags: { include: { tag: { select: { slug: true } } } },
+      assets: true
     }
   });
 
@@ -323,6 +431,12 @@ export async function DELETE(
     if (page.thumbWebpKey.includes("-800.")) {
       keysToRemove.add(page.thumbWebpKey.replace("-800.", "-400."));
     }
+  }
+  for (const asset of page.assets) {
+    keysToRemove.add(asset.pdfKey);
+    keysToRemove.add(asset.coverImageKey);
+    keysToRemove.add(asset.thumbLargeKey);
+    keysToRemove.add(asset.thumbSmallKey);
   }
 
   try {

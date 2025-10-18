@@ -15,13 +15,32 @@ export async function GET(
   request: Request,
   { params }: { params: { slug: string } }
 ) {
+  const url = new URL(request.url);
+  const assetId = url.searchParams.get("asset");
+
   const page = await getDownloadablePage(params.slug);
 
   if (!page) {
     return NextResponse.json(
-      { error: "Boyama sayfasÄ± bulunamadÄ±." },
+      { error: "Boyama sayfasý bulunamadý." },
       { status: 404 }
     );
+  }
+
+  let pdfKey = page.pdfKey;
+  let downloadFileName = `${page.slug}.pdf`;
+
+  if (assetId) {
+    const assetIndex = page.assets.findIndex((asset) => asset.id === assetId);
+    if (assetIndex === -1) {
+      return NextResponse.json(
+        { error: "Ýstenen görsel bulunamadý." },
+        { status: 404 }
+      );
+    }
+    const asset = page.assets[assetIndex];
+    pdfKey = asset.pdfKey;
+    downloadFileName = `${page.slug}-${assetIndex + 2}.pdf`;
   }
 
   const ip =
@@ -31,12 +50,8 @@ export async function GET(
   const ipHash = crypto.createHash("sha256").update(ip).digest("hex");
   const userAgent = request.headers.get("user-agent") ?? undefined;
 
-  const contentDisposition = `attachment; filename="${page.slug}.pdf"`;
-  const signedUrl = await getSignedDownloadUrl(
-    page.pdfKey,
-    300,
-    contentDisposition
-  );
+  const contentDisposition = `attachment; filename="${downloadFileName}"`;
+  const signedUrl = await getSignedDownloadUrl(pdfKey, 300, contentDisposition);
 
   await Promise.all([
     incrementDownloads(page.id),

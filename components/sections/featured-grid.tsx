@@ -1,23 +1,5 @@
-import type {
-  ColoringPage,
-  ColoringPageCategory,
-  ColoringPageTag
-} from "@prisma/client";
-
 import { ColoringPageCard } from "@/components/cards/coloring-page-card";
-
-type ColoringPageWithRelations = ColoringPage & {
-  categories: Array<
-    ColoringPageCategory & {
-      category: { id: string; name: string; slug: string };
-    }
-  >;
-  tags: Array<
-    ColoringPageTag & {
-      tag: { id: string; name: string; slug: string };
-    }
-  >;
-};
+import type { ColoringPageWithRelations } from "@/lib/data/coloring-pages";
 
 type FeaturedGridProps = {
   pages: ColoringPageWithRelations[];

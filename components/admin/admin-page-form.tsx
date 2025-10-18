@@ -81,9 +81,12 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
     values.categories.forEach((slug) => formData.append("categories", slug));
     values.tags.forEach((slug) => formData.append("tags", slug));
 
-    const imageFile = selectedImage?.[0];
-    if (imageFile) {
-      formData.append("image", imageFile);
+    const files = selectedImage ? Array.from(selectedImage) : [];
+    if (files.length > 0) {
+      formData.append("image", files[0]);
+      files.slice(1).forEach((file) => {
+        formData.append("images", file);
+      });
     }
 
     const endpoint = page ? `/api/admin/pages/${page.id}` : "/api/admin/pages";
@@ -266,6 +269,7 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
         <Input
           id="image"
           type="file"
+          multiple
           accept="image/png,image/jpeg,image/webp,image/svg+xml"
           disabled={isPending}
           onChange={(event) => {
@@ -275,7 +279,8 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
           }}
         />
         <p className="text-xs text-brand-dark/60">
-          Görsel yüklemeden önce dikey boyutta olduğuna emin olun; gerekirse otomatik olarak düzenlenecektir.
+          Birden fazla görsel seçebilirsiniz. Yüklemeden önce dikey boyutta
+          olduklarından emin olun; gerekirse otomatik olarak düzenlenecektir.
         </p>
         {imageError ? (
           <p className="text-xs text-red-500">{imageError}</p>

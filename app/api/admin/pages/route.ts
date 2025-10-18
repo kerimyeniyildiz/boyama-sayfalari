@@ -115,6 +115,9 @@ export async function POST(request: Request) {
   const rawImage = (formData.get("image") ?? formData.get("cover")) as
     | File
     | null;
+  const extraImages = formData
+    .getAll("images")
+    .filter((value): value is File => value instanceof File && value.size > 0);
 
   if (!(rawImage instanceof File) || rawImage.size === 0) {
     return jsonError(400, "IMAGE_REQUIRED", "Görsel yüklenmedi.", {
@@ -122,26 +125,30 @@ export async function POST(request: Request) {
     });
   }
 
-  if (!ALLOWED_IMAGE_TYPES.has(rawImage.type)) {
-    return jsonError(
-      400,
-      "INVALID_IMAGE_TYPE",
-      "Görsel yalnızca PNG, JPEG, SVG veya WebP formatında olabilir.",
-      {
-        image: ["Görsel yalnızca PNG, JPEG, SVG veya WebP formatında olabilir."]
-      }
-    );
-  }
+  const allImages = [rawImage, ...extraImages];
 
-  if (rawImage.size > MAX_IMAGE_SIZE) {
-    return jsonError(
-      400,
-      "IMAGE_TOO_LARGE",
-      `Görsel ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sınırını aşıyor.`,
-      {
-        image: [`Görsel ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sınırını aşıyor.`]
-      }
-    );
+  for (const image of allImages) {
+    if (!ALLOWED_IMAGE_TYPES.has(image.type)) {
+      return jsonError(
+        400,
+        "INVALID_IMAGE_TYPE",
+        "Görsel yalnızca PNG, JPEG, SVG veya WebP formatında olabilir.",
+        {
+          image: ["Görsel yalnızca PNG, JPEG, SVG veya WebP formatında olabilir."]
+        }
+      );
+    }
+
+    if (image.size > MAX_IMAGE_SIZE) {
+      return jsonError(
+        400,
+        "IMAGE_TOO_LARGE",
+        `Görsel ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sınırını aşıyor.`,
+        {
+          image: [`Görsel ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sınırını aşıyor.`]
+        }
+      );
+    }
   }
 
   const title = toString(formData.get("title"));
@@ -179,6 +186,16 @@ export async function POST(request: Request) {
   const thumbKeySmall = `thumb/${metadata.slug}-400.webp`;
 
   const uploadedKeys: string[] = [];
+  const extraAssetRecords: Array<{
+    pdfKey: string;
+    coverImageKey: string;
+    thumbLargeKey: string;
+    thumbSmallKey: string;
+    width: number;
+    height: number;
+    fileSizeBytes: number;
+    position: number;
+  }> = [];
 
   try {
     await uploadToR2({
@@ -212,6 +229,62 @@ export async function POST(request: Request) {
       cacheControl: IMAGE_CACHE_CONTROL
     });
     uploadedKeys.push(thumbKeyLarge);
+
+    for (let index = 0; index < extraImages.length; index += 1) {
+      const file = extraImages[index];
+      const extraBuffer = Buffer.from(await file.arrayBuffer());
+      const extraPdfBuffer = await generatePdfFromImage(extraBuffer);
+      const extraAssets = await generateImageAssets(extraBuffer);
+
+      const suffix = index + 2;
+      const extraPdfKey = `pdf/${metadata.slug}-${suffix}.pdf`;
+      const extraCoverKey = `cover/${metadata.slug}-${suffix}.webp`;
+      const extraThumbSmallKey = `thumb/${metadata.slug}-${suffix}-400.webp`;
+      const extraThumbLargeKey = `thumb/${metadata.slug}-${suffix}-800.webp`;
+
+      await uploadToR2({
+        key: extraPdfKey,
+        body: extraPdfBuffer,
+        contentType: "application/pdf",
+        cacheControl: PDF_CACHE_CONTROL
+      });
+      uploadedKeys.push(extraPdfKey);
+
+      await uploadToR2({
+        key: extraCoverKey,
+        body: extraAssets.cover,
+        contentType: "image/webp",
+        cacheControl: IMAGE_CACHE_CONTROL
+      });
+      uploadedKeys.push(extraCoverKey);
+
+      await uploadToR2({
+        key: extraThumbSmallKey,
+        body: extraAssets.thumbSmall,
+        contentType: "image/webp",
+        cacheControl: IMAGE_CACHE_CONTROL
+      });
+      uploadedKeys.push(extraThumbSmallKey);
+
+      await uploadToR2({
+        key: extraThumbLargeKey,
+        body: extraAssets.thumbLarge,
+        contentType: "image/webp",
+        cacheControl: IMAGE_CACHE_CONTROL
+      });
+      uploadedKeys.push(extraThumbLargeKey);
+
+      extraAssetRecords.push({
+        pdfKey: extraPdfKey,
+        coverImageKey: extraCoverKey,
+        thumbLargeKey: extraThumbLargeKey,
+        thumbSmallKey: extraThumbSmallKey,
+        width: extraAssets.width,
+        height: extraAssets.height,
+        fileSizeBytes: getBufferSize(extraPdfBuffer),
+        position: index + 1
+      });
+    }
 
     const [categories, tags] = await Promise.all([
       prisma.category.findMany({
@@ -247,6 +320,9 @@ export async function POST(request: Request) {
           create: tags.map((tag) => ({
             tag: { connect: { id: tag.id } }
           }))
+        },
+        assets: {
+          create: extraAssetRecords
         }
       }
     });
