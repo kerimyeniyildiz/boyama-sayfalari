@@ -1,4 +1,4 @@
-import { PageStatus, Prisma } from "@prisma/client";
+﻿import { PageStatus, Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
 
@@ -20,7 +20,7 @@ export async function searchColoringPages(filters: SearchFilters) {
     Prisma.sql`cp."status" = ${PageStatus.PUBLISHED}`
   ];
 
-  let rankSql: Prisma.Sql = Prisma.sql`0::float AS rank`;
+  let rankSql = Prisma.sql`0::float AS rank`;
 
   if (filters.q) {
     const query = filters.q.trim();
@@ -56,12 +56,14 @@ export async function searchColoringPages(filters: SearchFilters) {
     );
   }
 
-  const whereClause: Prisma.Sql =
-    conditions.length > 0
-      ? Prisma.sql`WHERE ${Prisma.join(conditions, Prisma.sql` AND `)}`
-      : Prisma.empty;
+  let whereClause: Prisma.Sql;
+  if (conditions.length > 0) {
+    whereClause = Prisma.sql`WHERE ${Prisma.join(conditions, Prisma.sql` AND `)}`;
+  } else {
+    whereClause = Prisma.sql``;
+  }
 
-  const orderClause: Prisma.Sql = filters.q
+  const orderClause = filters.q
     ? Prisma.sql`ORDER BY rank DESC, cp."createdAt" DESC`
     : Prisma.sql`ORDER BY cp."createdAt" DESC`;
 
