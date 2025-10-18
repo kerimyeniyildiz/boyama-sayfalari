@@ -11,6 +11,35 @@ export const runtime = "nodejs";
 
 const IMAGE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 const PDF_CACHE_CONTROL = "public, max-age=31536000, immutable";
+const MAX_PDF_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+const PDF_CONTENT_TYPE = "application/pdf";
+const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+
+type ErrorResponse = {
+  error: {
+    code: string;
+    message: string;
+    fieldErrors?: Record<string, string[]>;
+  };
+};
+
+function jsonError(
+  status: number,
+  code: string,
+  message: string,
+  fieldErrors?: Record<string, string[]>
+) {
+  const body: ErrorResponse = {
+    error: {
+      code,
+      message,
+      ...(fieldErrors ? { fieldErrors } : {})
+    }
+  };
+
+  return NextResponse.json(body, { status });
+}
 
 function toString(value: FormDataEntryValue | null): string {
   return typeof value === "string" ? value.trim() : "";
@@ -36,25 +65,68 @@ export async function POST(request: Request) {
   const coverFile = formData.get("cover");
 
   if (!(pdfFile instanceof File) || pdfFile.size === 0) {
-    return NextResponse.json(
-      { error: "PDF dosyası eksik." },
-      { status: 400 }
+    return jsonError(400, "PDF_REQUIRED", "PDF dosyası eksik.", {
+      pdf: ["PDF dosyası eksik."]
+    });
+  }
+
+  if (pdfFile.type !== PDF_CONTENT_TYPE) {
+    return jsonError(
+      400,
+      "INVALID_PDF_TYPE",
+      "PDF dosya formatı geçersiz.",
+      { pdf: ["PDF dosya formatı geçersiz."] }
+    );
+  }
+
+  if (pdfFile.size > MAX_PDF_SIZE) {
+    return jsonError(
+      400,
+      "PDF_TOO_LARGE",
+      `PDF dosyası ${MAX_PDF_SIZE / (1024 * 1024)}MB sınırını aşıyor.`,
+      {
+        pdf: [
+          `PDF dosyası ${MAX_PDF_SIZE / (1024 * 1024)}MB sınırını aşıyor.`
+        ]
+      }
     );
   }
 
   if (!(coverFile instanceof File) || coverFile.size === 0) {
-    return NextResponse.json(
-      { error: "Kapak görseli eksik." },
-      { status: 400 }
+    return jsonError(400, "COVER_REQUIRED", "Kapak görseli eksik.", {
+      cover: ["Kapak görseli eksik."]
+    });
+  }
+
+  if (!ALLOWED_IMAGE_TYPES.has(coverFile.type)) {
+    return jsonError(
+      400,
+      "INVALID_COVER_TYPE",
+      "Kapak görseli sadece PNG, JPEG veya WebP olabilir.",
+      {
+        cover: ["Kapak görseli sadece PNG, JPEG veya WebP olabilir."]
+      }
+    );
+  }
+
+  if (coverFile.size > MAX_IMAGE_SIZE) {
+    return jsonError(
+      400,
+      "COVER_TOO_LARGE",
+      `Kapak görseli ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sınırını aşıyor.`,
+      {
+        cover: [
+          `Kapak görseli ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sınırını aşıyor.`
+        ]
+      }
     );
   }
 
   const title = toString(formData.get("title"));
   if (!title) {
-    return NextResponse.json(
-      { error: "Başlık gereklidir." },
-      { status: 400 }
-    );
+    return jsonError(400, "TITLE_REQUIRED", "Başlık gereklidir.", {
+      title: ["Başlık gereklidir."]
+    });
   }
 
   const rawSlug = toString(formData.get("slug"));
@@ -94,9 +166,12 @@ export async function POST(request: Request) {
 
   const parsed = pageMetadataSchema.safeParse(metadataInput);
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.flatten().fieldErrors },
-      { status: 400 }
+    const fieldErrors = parsed.error.flatten().fieldErrors;
+    return jsonError(
+      400,
+      "VALIDATION_ERROR",
+      "Form alanlarında hatalar var.",
+      fieldErrors
     );
   }
 
@@ -207,9 +282,10 @@ export async function POST(request: Request) {
       uploadedKeys.map((key) => deleteFromR2(key).catch(() => undefined))
     );
     console.error("Yeni sayfa oluşturulamadı", error);
-    return NextResponse.json(
-      { error: "Sayfa oluşturulurken bir hata oluştu." },
-      { status: 500 }
+    return jsonError(
+      500,
+      "PAGE_CREATE_FAILED",
+      "Sayfa oluşturulurken bir hata oluştu."
     );
   }
 }

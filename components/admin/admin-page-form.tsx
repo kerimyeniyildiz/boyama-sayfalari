@@ -79,6 +79,7 @@ export function AdminPageForm({
   const router = useRouter();
   const [slugEdited, setSlugEdited] = useState(Boolean(page?.slug));
   const [isPending, startTransition] = useTransition();
+  const [formError, setFormError] = useState<string | null>(null);
 
   const defaultValues: InternalFormValues = {
     title: page?.title ?? "",
@@ -181,31 +182,67 @@ export function AdminPageForm({
     const method = page ? "PUT" : "POST";
 
     startTransition(async () => {
-      const response = await fetch(endpoint, {
-        method,
-        body: formData
-      });
+      setFormError(null);
+      form.clearErrors();
 
-      if (!response.ok) {
+      try {
+        const response = await fetch(endpoint, {
+          method,
+          body: formData
+        });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          const errorMessage =
+            typeof data?.error?.message === "string"
+              ? data.error.message
+              : "Kaydetme iÅŸlemi sÄ±rasÄ±nda bir hata oluÅŸtu.";
+          const fieldErrors: Record<string, string[]> | undefined =
+            data?.error?.fieldErrors;
+
+          if (fieldErrors) {
+            Object.entries(fieldErrors).forEach(([key, messages]) => {
+              const message = messages?.[0];
+              if (message) {
+                form.setError(key as keyof InternalFormValues, {
+                  type: "server",
+                  message
+                });
+              }
+            });
+          }
+
+          setFormError(errorMessage);
+          toast.error(errorMessage);
+          return;
+        }
+
         const data = await response.json().catch(() => ({}));
-        toast.error(
-          data?.error ?? "Kaydetme iÅŸlemi sÄ±rasÄ±nda bir hata oluÅŸtu."
-        );
-        return;
+        toast.success("Boyama sayfasÄ± kaydedildi.");
+        router.push(`/sayfa/${data.page?.slug ?? values.slug}`);
+        router.refresh();
+      } catch (error) {
+        console.error("Yeni sayfa kaydedilirken bir hata oluÅŸtu", error);
+        const fallbackMessage =
+          "Kaydetme iÅŸlemi sÄ±rasÄ±nda beklenmedik bir hata oluÅŸtu.";
+        setFormError(fallbackMessage);
+        toast.error(fallbackMessage);
       }
-
-      const data = await response.json().catch(() => ({}));
-      toast.success("Boyama sayfasÄ± kaydedildi.");
-      router.push(`/sayfa/${data.page?.slug ?? values.slug}`);
-      router.refresh();
     });
   });
+
+  const errors = form.formState.errors;
 
   return (
     <form
       className="space-y-8 rounded-3xl border border-brand-dark/10 bg-white/90 p-8 shadow-card"
       onSubmit={onSubmit}
     >
+      {formError ? (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {formError}
+        </div>
+      ) : null}
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="title">BaÅŸlÄ±k</Label>
@@ -216,7 +253,7 @@ export function AdminPageForm({
             placeholder="Ã–rn. Sevimli Orman ArkadaÅŸlarÄ±"
           />
           <p className="text-xs text-red-500">
-            {form.formState.errors.title?.message}
+            {errors.title?.message}
           </p>
         </div>
         <div className="space-y-2">
@@ -230,7 +267,7 @@ export function AdminPageForm({
             placeholder="sevimli-orman-arkadaslari"
           />
           <p className="text-xs text-red-500">
-            {form.formState.errors.slug?.message}
+            {errors.slug?.message}
           </p>
         </div>
       </div>
@@ -245,7 +282,7 @@ export function AdminPageForm({
           placeholder="Ã‡ocuÄŸunuzun hayal gÃ¼cÃ¼nÃ¼ destekleyen detaylÄ± aÃ§Ä±klama..."
         />
         <p className="text-xs text-red-500">
-          {form.formState.errors.description?.message}
+          {errors.description?.message}
         </p>
       </div>
 
@@ -424,6 +461,9 @@ export function AdminPageForm({
               ? "Slug deÄŸiÅŸikliklerinde PDF dosyasÄ±nÄ± yeniden yÃ¼kleyin."
               : "PDF dosyasÄ± zorunludur."}
           </p>
+          {errors.pdf?.message ? (
+            <p className="text-xs text-red-500">{errors.pdf.message}</p>
+          ) : null}
         </div>
         <div className="space-y-2">
           <Label htmlFor="cover">Kapak GÃ¶rseli</Label>
@@ -437,6 +477,9 @@ export function AdminPageForm({
           <p className="text-xs text-brand-dark/60">
             En iyi sonuÃ§ iÃ§in 1600px geniÅŸliÄŸinde gÃ¶rsel yÃ¼kleyin.
           </p>
+          {errors.cover?.message ? (
+            <p className="text-xs text-red-500">{errors.cover.message}</p>
+          ) : null}
         </div>
       </div>
 
@@ -455,4 +498,5 @@ export function AdminPageForm({
     </form>
   );
 }
+
 

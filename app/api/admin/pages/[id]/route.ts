@@ -11,6 +11,35 @@ export const runtime = "nodejs";
 
 const IMAGE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 const PDF_CACHE_CONTROL = "public, max-age=31536000, immutable";
+const MAX_PDF_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+const PDF_CONTENT_TYPE = "application/pdf";
+const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+
+type ErrorResponse = {
+  error: {
+    code: string;
+    message: string;
+    fieldErrors?: Record<string, string[]>;
+  };
+};
+
+function jsonError(
+  status: number,
+  code: string,
+  message: string,
+  fieldErrors?: Record<string, string[]>
+) {
+  const body: ErrorResponse = {
+    error: {
+      code,
+      message,
+      ...(fieldErrors ? { fieldErrors } : {})
+    }
+  };
+
+  return NextResponse.json(body, { status });
+}
 
 function toString(value: FormDataEntryValue | null): string {
   return typeof value === "string" ? value.trim() : "";
@@ -35,7 +64,7 @@ export async function PUT(
   });
 
   if (!existingPage) {
-    return NextResponse.json({ error: "Sayfa bulunamadı." }, { status: 404 });
+    return jsonError(404, "PAGE_NOT_FOUND", "Sayfa bulunamadı.");
   }
 
   const title = toString(formData.get("title")) || existingPage.title;
@@ -90,9 +119,12 @@ export async function PUT(
 
   const parsed = pageMetadataSchema.safeParse(metadataInput);
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.flatten().fieldErrors },
-      { status: 400 }
+    const fieldErrors = parsed.error.flatten().fieldErrors;
+    return jsonError(
+      400,
+      "VALIDATION_ERROR",
+      "Form alanlarında hatalar var.",
+      fieldErrors
     );
   }
 
@@ -103,12 +135,18 @@ export async function PUT(
   const slugChanged = metadata.slug !== existingPage.slug;
 
   if (slugChanged && !(pdfFile instanceof File) && !(coverFile instanceof File)) {
-    return NextResponse.json(
+    return jsonError(
+      400,
+      "FILES_REQUIRED_FOR_SLUG_CHANGE",
+      "Slug değiştirildiğinde PDF ve kapak dosyalarının yeniden yüklenmesi gerekir.",
       {
-        error:
-          "Slug değiştirildiğinde PDF ve kapak dosyalarının yeniden yüklenmesi gerekir."
-      },
-      { status: 400 }
+        pdf: [
+          "Slug değiştirildiğinde PDF dosyasının yeniden yüklenmesi gerekir."
+        ],
+        cover: [
+          "Slug değiştirildiğinde kapak görselinin yeniden yüklenmesi gerekir."
+        ]
+      }
     );
   }
 
@@ -121,7 +159,35 @@ export async function PUT(
   const keysToDelete: string[] = [];
 
   try {
-    if (pdfFile instanceof File && pdfFile.size > 0) {
+    if (pdfFile instanceof File) {
+      if (pdfFile.size === 0) {
+        return jsonError(400, "PDF_REQUIRED", "PDF dosyası eksik.", {
+          pdf: ["PDF dosyası eksik."]
+        });
+      }
+
+      if (pdfFile.type !== PDF_CONTENT_TYPE) {
+        return jsonError(
+          400,
+          "INVALID_PDF_TYPE",
+          "PDF dosya formatı geçersiz.",
+          { pdf: ["PDF dosya formatı geçersiz."] }
+        );
+      }
+
+      if (pdfFile.size > MAX_PDF_SIZE) {
+        return jsonError(
+          400,
+          "PDF_TOO_LARGE",
+          `PDF dosyası ${MAX_PDF_SIZE / (1024 * 1024)}MB sınırını aşıyor.`,
+          {
+            pdf: [
+              `PDF dosyası ${MAX_PDF_SIZE / (1024 * 1024)}MB sınırını aşıyor.`
+            ]
+          }
+        );
+      }
+
       const pdfBuffer = Buffer.from(await pdfFile.arrayBuffer());
       pdfKey = `pdf/${metadata.slug}.pdf`;
       await uploadToR2({
@@ -135,7 +201,39 @@ export async function PUT(
       metadata.fileSizeBytes = metadata.fileSizeBytes ?? getBufferSize(pdfBuffer);
     }
 
-    if (coverFile instanceof File && coverFile.size > 0) {
+    if (coverFile instanceof File) {
+      if (coverFile.size === 0) {
+        return jsonError(400, "COVER_REQUIRED", "Kapak görseli eksik.", {
+          cover: ["Kapak görseli eksik."]
+        });
+      }
+
+      if (!ALLOWED_IMAGE_TYPES.has(coverFile.type)) {
+        return jsonError(
+          400,
+          "INVALID_COVER_TYPE",
+          "Kapak görseli sadece PNG, JPEG veya WebP olabilir.",
+          {
+            cover: [
+              "Kapak görseli sadece PNG, JPEG veya WebP olabilir."
+            ]
+          }
+        );
+      }
+
+      if (coverFile.size > MAX_IMAGE_SIZE) {
+        return jsonError(
+          400,
+          "COVER_TOO_LARGE",
+          `Kapak görseli ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sınırını aşıyor.`,
+          {
+            cover: [
+              `Kapak görseli ${MAX_IMAGE_SIZE / (1024 * 1024)}MB sınırını aşıyor.`
+            ]
+          }
+        );
+      }
+
       const coverBuffer = Buffer.from(await coverFile.arrayBuffer());
       const variants = await generateWebpVariants(coverBuffer);
       const extension = coverFile.type.split("/")[1] ?? "jpg";
@@ -242,9 +340,10 @@ export async function PUT(
       uploadedKeys.map((key) => deleteFromR2(key).catch(() => undefined))
     );
     console.error("Sayfa güncellenemedi", error);
-    return NextResponse.json(
-      { error: "Sayfa güncellenirken bir hata oluştu." },
-      { status: 500 }
+    return jsonError(
+      500,
+      "PAGE_UPDATE_FAILED",
+      "Sayfa güncellenirken bir hata oluştu."
     );
   }
 }

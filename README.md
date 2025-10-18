@@ -9,6 +9,7 @@ Next.js App Router tabanlı, Prisma + PostgreSQL kullanan ve Cloudflare R2 üzer
 - ✅ Cloudflare R2 entegrasyonu (PDF + orijinal kapak + 400w/800w WebP thumbnail)
 - ✅ Sharp ile görsel işleme, tam metin arama (Türkçe tsvector + GIN)
 - ✅ Admin paneli (e-posta/şifre, HttpOnly cookie oturumu)
+- ✅ Admin panelinde dosya yükleme limitleri (PDF 10MB, kapak 5MB) ve anlık form hataları
 - ✅ SEO: `generateMetadata`, `sitemap`, `robots`, JSON-LD, dinamik `/og/[slug]`
 - ✅ Vitest (unit), Playwright (e2e) ve GitHub Actions CI
 
