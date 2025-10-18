@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { useForm, type Resolver } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import slugify from "slugify";
@@ -14,10 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 type PageFormValues = z.infer<typeof pageMetadataSchema>;
-
-type InternalFormValues = PageFormValues & {
-  image?: FileList;
-};
 
 type CategoryOption = {
   id: string;
@@ -52,46 +48,19 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
   const [slugEdited, setSlugEdited] = useState(Boolean(page?.slug));
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<FileList | null>(null);
 
-  const defaultValues: InternalFormValues = {
+  const defaultValues: PageFormValues = {
     title: page?.title ?? "",
     slug: page?.slug ?? "",
     categories: page?.categories.map((item) => item.category.slug) ?? [],
-    tags: page?.tags.map((item) => item.tag.slug) ?? [],
-    image: undefined
+    tags: page?.tags.map((item) => item.tag.slug) ?? []
   };
 
-  const resolver: Resolver<InternalFormValues> = async (
-    values,
-    context,
-    options
-  ) => {
-    const baseResolver = zodResolver(pageMetadataSchema);
-    const result = await baseResolver(values, context, options);
-
-    if (!result.values) {
-      return result;
-    }
-
-    return {
-      values: {
-        ...result.values,
-        image: values.image
-      },
-      errors: result.errors
-    };
-  };
-
-  const form = useForm<InternalFormValues>({
-    resolver,
+  const form = useForm<PageFormValues>({
+    resolver: zodResolver(pageMetadataSchema),
     defaultValues
-  });
-
-  const imageRegister = form.register("image", {
-    onChange: (event) => {
-      const files = (event.target as HTMLInputElement).files ?? undefined;
-      form.setValue("image", files, { shouldDirty: true });
-    }
   });
 
   const titleValue = form.watch("title");
@@ -112,7 +81,7 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
     values.categories.forEach((slug) => formData.append("categories", slug));
     values.tags.forEach((slug) => formData.append("tags", slug));
 
-    const imageFile = values.image?.[0];
+    const imageFile = selectedImage?.[0];
     if (imageFile) {
       formData.append("image", imageFile);
     }
@@ -122,6 +91,7 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
 
     startTransition(async () => {
       setFormError(null);
+      setImageError(null);
       form.clearErrors();
 
       try {
@@ -144,7 +114,11 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
             Object.entries(fieldErrors).forEach(([key, messages]) => {
               const messageText = messages?.[0];
               if (messageText) {
-                form.setError(key as keyof InternalFormValues, {
+                if (key === "image") {
+                  setImageError(messageText);
+                  return;
+                }
+                form.setError(key as keyof PageFormValues, {
                   type: "server",
                   message: messageText
                 });
@@ -294,13 +268,17 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
           type="file"
           accept="image/png,image/jpeg,image/webp,image/svg+xml"
           disabled={isPending}
-          {...imageRegister}
+          onChange={(event) => {
+            const files = event.target.files;
+            setSelectedImage(files && files.length > 0 ? files : null);
+            setImageError(null);
+          }}
         />
         <p className="text-xs text-brand-dark/60">
           Görsel yüklemeden önce dikey boyutta olduğuna emin olun; gerekirse otomatik olarak düzenlenecektir.
         </p>
-        {errors.image?.message ? (
-          <p className="text-xs text-red-500">{errors.image.message}</p>
+        {imageError ? (
+          <p className="text-xs text-red-500">{imageError}</p>
         ) : null}
       </div>
 
