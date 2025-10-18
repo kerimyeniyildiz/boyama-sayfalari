@@ -20,7 +20,7 @@ export async function searchColoringPages(filters: SearchFilters) {
     Prisma.sql`cp."status" = ${PageStatus.PUBLISHED}`
   ];
 
-  let rankSql = Prisma.sql`0::float AS rank`;
+  let rankSql: Prisma.Sql = Prisma.sql`0::float AS rank`;
 
   if (filters.q) {
     const query = filters.q.trim();
@@ -56,12 +56,12 @@ export async function searchColoringPages(filters: SearchFilters) {
     );
   }
 
-  const whereClause =
+  const whereClause: Prisma.Sql =
     conditions.length > 0
       ? Prisma.sql`WHERE ${Prisma.join(conditions, Prisma.sql` AND `)}`
       : Prisma.empty;
 
-  const orderClause = filters.q
+  const orderClause: Prisma.Sql = filters.q
     ? Prisma.sql`ORDER BY rank DESC, cp."createdAt" DESC`
     : Prisma.sql`ORDER BY cp."createdAt" DESC`;
 
