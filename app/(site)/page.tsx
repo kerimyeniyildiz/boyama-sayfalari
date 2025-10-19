@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata() {
   return buildMetadata({
-    title: siteConfig.name,
+    title: "Boyama Sayfaları – Ücretsiz, Eğitici ve Eğlenceli Çizimler",
     description: siteConfig.description,
     path: "/"
   });

@@ -1,4 +1,4 @@
-import { buildMetadata, siteConfig } from "@/lib/seo";
+import { buildMetadata } from "@/lib/seo";
 import { AdminLoginForm } from "@/components/admin/admin-login-form";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ type PageProps = {
 
 export async function generateMetadata() {
   return buildMetadata({
-    title: `Yönetici girişi | ${siteConfig.name}`,
+    title: "Yönetici girişi | Yönetici Paneli",
     description: "Yönetici paneline erişmek için giriş yapın.",
     path: "/admin/login"
   });

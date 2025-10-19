@@ -21,6 +21,17 @@ function normalizeDate(
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }
 
+function formatSlugForTitle(slug: string) {
+  return slug
+    .split("-")
+    .filter(Boolean)
+    .map((part) => {
+      const lower = part.toLocaleLowerCase("tr-TR");
+      return lower.charAt(0).toLocaleUpperCase("tr-TR") + lower.slice(1);
+    })
+    .join(" ");
+}
+
 type PageProps = {
   params: {
     slug: string;
@@ -29,6 +40,8 @@ type PageProps = {
 
 export async function generateMetadata({ params }: PageProps) {
   const page = await getColoringPageBySlug(params.slug);
+
+  const formattedSlug = formatSlugForTitle(params.slug);
 
   if (!page) {
     return buildMetadata({
@@ -42,9 +55,12 @@ export async function generateMetadata({ params }: PageProps) {
   const createdAt = normalizeDate(page.createdAt);
   const updatedAt = normalizeDate(page.updatedAt);
 
+  const title = `${formattedSlug} Boyama Sayfaları - Yüksek Kalite PDF - (Ücretsiz)`;
+  const description = `En güzel ${formattedSlug} boyama sayfalarını hemen indir! Ücretsiz, baskıya uygun ve eğlenceli ${formattedSlug} çizimleriyle boyamaya başla.`;
+
   return buildMetadata({
-    title: page.title,
-    description: page.description,
+    title,
+    description,
     path: `/${page.slug}`,
     image: {
       url: imageUrl,

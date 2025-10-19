@@ -22,7 +22,7 @@ export const siteConfig = {
   url: env.NEXT_PUBLIC_SITE_URL,
   defaultLocale: env.NEXT_PUBLIC_DEFAULT_LOCALE,
   description:
-    "Çocuklar için boyama sayfaları, kategorilere göre filtrelenmiş ve PDF olarak indirilebilir."
+    "Çocuklar için binlerce ücretsiz boyama sayfaları seni bekliyor. Renklerle hayal gücünü geliştir. Hemen yüksek kaliteli PDF boyama sayfasını indir, yazdır ve boya!"
 };
 
 export function buildMetadata({
@@ -37,7 +37,9 @@ export function buildMetadata({
   const url = path ? new URL(path, siteConfig.url).toString() : siteConfig.url;
 
   return {
-    title,
+    title: {
+      absolute: title
+    },
     description,
     alternates: {
       canonical: url

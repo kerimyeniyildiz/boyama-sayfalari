@@ -1,6 +1,7 @@
-﻿import Image from "next/image";
+import Image from "next/image";
 import Link from "next/link";
 import type { Route } from "next";
+import { ArrowDownToLine, FileDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { ColoringPageDetail } from "@/lib/data/coloring-pages";
@@ -98,7 +99,8 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
               <div className="flex gap-2">
                 <dt className="min-w-[120px] font-medium text-brand-dark">Boyut</dt>
                 <dd>
-                  {primaryEntry.width ?? "?"}x{primaryEntry.height ?? "?"} px · {Math.round((page.fileSizeBytes ?? 0) / 1024)} KB
+                  {primaryEntry.width ?? "?"}×{primaryEntry.height ?? "?"} px ·{" "}
+                  {Math.round((page.fileSizeBytes ?? 0) / 1024)} KB
                 </dd>
               </div>
               <div className="flex gap-2">
@@ -133,7 +135,13 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
           </div>
           <div className="flex flex-col gap-3">
             <Button asChild size="lg" className="w-full">
-              <Link href={pdfRoute}>📥 PDF indir</Link>
+              <Link
+                href={pdfRoute}
+                className="flex items-center justify-center gap-2"
+              >
+                <FileDown className="h-5 w-5" />
+                PDF indir
+              </Link>
             </Button>
           </div>
         </div>
@@ -148,7 +156,11 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
                 return null;
               }
 
-              const { large: entryImage, blur: entryBlur, optimized: entryOptimized } = resolveImageKeys(entry);
+              const {
+                large: entryImage,
+                blur: entryBlur,
+                optimized: entryOptimized
+              } = resolveImageKeys(entry);
 
               return (
                 <div
@@ -171,12 +183,15 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
                     />
                   </Link>
                   <div className="flex flex-col gap-2">
-                    <h3 className="text-base font-semibold text-brand-dark">{entry.title}</h3>
+                    <h3 className="text-center text-base font-semibold text-brand-dark">
+                      {entry.title}
+                    </h3>
                     <Link
                       href={`/${entry.slug}` as Route}
-                      className="text-center text-sm font-medium text-brand transition hover:text-brand-dark"
+                      className="flex items-center justify-center gap-2 text-sm font-medium text-brand transition hover:text-brand-dark"
                     >
-                      🎨 Boyama sayfasını indir
+                      <ArrowDownToLine className="h-4 w-4" />
+                      Boyama sayfasını indir
                     </Link>
                   </div>
                 </div>

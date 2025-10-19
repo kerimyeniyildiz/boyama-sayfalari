@@ -18,15 +18,20 @@ export function HeroSection({ categories }: HeroSectionProps) {
   return (
     <section className="container grid gap-10 py-16 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
       <div className="space-y-6">
+        <h1 className="sr-only">Boyama sayfaları</h1>
         <span className="inline-flex items-center gap-2 rounded-full border border-brand-dark/20 bg-white px-4 py-2 text-sm text-brand-dark/70">
           <Sparkles className="h-4 w-4 text-brand-dark" />
           Yeni: Türkçe boyama koleksiyonları
         </span>
-        <h1 className="text-4xl font-bold text-brand-dark md:text-5xl">
+        <p
+          className="text-4xl font-bold text-brand-dark md:text-5xl"
+          aria-hidden="true"
+        >
           Çocuklar için yaratıcı boyama dünyası
-        </h1>
+        </p>
         <p className="text-lg text-brand-dark/80">
-          Kategorilere ve etiketlere göre filtrelenmiş, yazdırmaya hazır PDF boyama sayfaları. Hemen indir, renklendir ve paylaş.
+          Kategorilere ve etiketlere göre filtrelenmiş, yazdırmaya hazır PDF
+          boyama sayfaları. Hemen indir, renklendir ve paylaş.
         </p>
         <div className="flex flex-wrap gap-4">
           <Button asChild size="lg">
