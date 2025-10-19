@@ -1,1 +1,1 @@
-﻿ALTER TABLE "ColoringPage" ADD COLUMN "seoContent" TEXT;
+ALTER TABLE "ColoringPage" ADD COLUMN "seoContent" TEXT;
