@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import slugify from "slugify";
@@ -10,6 +10,7 @@ import { toast } from "sonner";
 
 import { pageMetadataSchema } from "@/lib/validation";
 import { Button } from "@/components/ui/button";
+import { SimpleRichTextEditor } from "@/components/admin/simple-rich-text-editor";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -35,6 +36,7 @@ type PagePayload = {
   slug: string;
   categories: Array<{ category: { slug: string } }>;
   tags: Array<{ tag: { slug: string } }>;
+  seoContent: string | null;
 };
 
 type AdminPageFormProps = {
@@ -55,7 +57,8 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
     title: page?.title ?? "",
     slug: page?.slug ?? "",
     categories: page?.categories.map((item) => item.category.slug) ?? [],
-    tags: page?.tags.map((item) => item.tag.slug) ?? []
+    tags: page?.tags.map((item) => item.tag.slug) ?? [],
+    seoContent: page?.seoContent ?? ""
   };
 
   const form = useForm<PageFormValues>({
@@ -78,6 +81,7 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
 
     formData.append("title", values.title);
     formData.append("slug", values.slug);
+    formData.append("seoContent", values.seoContent ?? "");
     values.categories.forEach((slug) => formData.append("categories", slug));
     values.tags.forEach((slug) => formData.append("tags", slug));
 
@@ -262,6 +266,29 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="seoContent">SEO metni</Label>
+        <Controller
+          name="seoContent"
+          control={form.control}
+          render={({ field }) => (
+            <SimpleRichTextEditor
+              id="seoContent"
+              value={field.value ?? ""}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              disabled={isPending}
+            />
+          )}
+        />
+        <p className="text-xs text-brand-dark/60">
+          Bu içerik ana koleksiyon sayfalarında “Boyama sayfalarını keşfet” bölümünün üstünde görüntülenir.
+        </p>
+        {errors.seoContent?.message ? (
+          <p className="text-xs text-red-500">{errors.seoContent.message}</p>
+        ) : null}
       </div>
 
       <div className="space-y-2">

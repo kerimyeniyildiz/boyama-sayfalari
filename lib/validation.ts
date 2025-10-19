@@ -6,7 +6,8 @@ export const pageMetadataSchema = z.object({
   title: z.string().min(3),
   slug: z.string().min(3),
   categories: z.array(z.string().min(1)).default([]),
-  tags: z.array(z.string().min(1)).default([])
+  tags: z.array(z.string().min(1)).default([]),
+  seoContent: z.string().max(10000).optional()
 });
 
 export const loginSchema = z.object({

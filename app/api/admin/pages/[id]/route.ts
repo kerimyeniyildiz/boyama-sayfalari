@@ -70,6 +70,10 @@ function toString(value: FormDataEntryValue | null): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function toRichText(value: FormDataEntryValue | null): string {
+  return typeof value === "string" ? value : "";
+}
+
 async function uploadPageAssets(
   file: File,
   slug: string,
@@ -181,6 +185,7 @@ export async function PUT(
   const rawSlug = toString(formData.get("slug")) || existingPage.slug;
   const submittedCategories = collectStrings(formData.getAll("categories"));
   const submittedTags = collectStrings(formData.getAll("tags"));
+  const seoContentRaw = toRichText(formData.get("seoContent"));
 
   const metadataInput = {
     title,
@@ -192,7 +197,8 @@ export async function PUT(
     tags:
       submittedTags.length > 0
         ? submittedTags
-        : existingPage.tags.map((item) => item.tag.slug)
+        : existingPage.tags.map((item) => item.tag.slug),
+    seoContent: seoContentRaw
   };
 
   const parsed = pageMetadataSchema.safeParse(metadataInput);
@@ -206,6 +212,10 @@ export async function PUT(
   }
 
   const metadata = parsed.data;
+  const normalizedSeoContent =
+    typeof metadata.seoContent === "string" && metadata.seoContent.trim().length > 0
+      ? metadata.seoContent.trim()
+      : null;
   const slugChanged = metadata.slug !== existingPage.slug;
 
   if (slugChanged) {
@@ -262,6 +272,7 @@ export async function PUT(
         slug: metadata.slug,
         title: metadata.title,
         description: `${metadata.title} boyama sayfası.`,
+        seoContent: normalizedSeoContent,
         pdfKey: assetInfo?.pdfKey ?? existingPage.pdfKey,
         coverImageKey: assetInfo?.coverKey ?? existingPage.coverImageKey,
         thumbWebpKey: assetInfo?.thumbLargeKey ?? existingPage.thumbWebpKey,

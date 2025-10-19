@@ -33,7 +33,8 @@ export default async function EditPage({ params }: PageProps) {
     title: page.title,
     slug: page.slug,
     categories: page.categories,
-    tags: page.tags
+    tags: page.tags,
+    seoContent: page.seoContent
   };
 
   const childSummaries = page.children.map((child) => ({

@@ -12,6 +12,7 @@ model ColoringPage {
   slug           String      @unique
   title          String
   description    String
+  seoContent     String?     @db.Text
   orientation    Orientation  @default(PORTRAIT)
   ageMin         Int?
   ageMax         Int?

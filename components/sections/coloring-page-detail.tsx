@@ -69,12 +69,18 @@ function buildExtraEntries(page: ColoringPageDetail): PageEntry[] {
   return page.children.map((child) => toPageEntry(child));
 }
 
+const seoContentClassName =
+  "space-y-3 text-brand-dark/75 [&_h1]:text-3xl [&_h1]:font-semibold [&_h1]:text-brand-dark [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:text-brand-dark [&_p]:leading-relaxed [&_strong]:font-semibold [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5";
+
 export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
   const primaryEntry = toPageEntry(page);
   const { large, blur, optimized } = resolveImageKeys(primaryEntry);
   const pdfRoute = `/api/download/${page.slug}` as Route;
   const extraEntries = buildExtraEntries(page);
   const isChild = Boolean(page.parent);
+  const isMainPage = !isChild;
+  const seoContentMarkup = page.seoContent?.trim() ?? "";
+  const hasSeoContent = isMainPage && seoContentMarkup.length > 0;
 
   return (
     <section className="container py-12">
@@ -149,7 +155,15 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
 
       {extraEntries.length > 0 ? (
         <div className="mt-16 space-y-6">
-          <h2 className="text-2xl font-semibold text-brand-dark">Ek boyama görselleri</h2>
+          {hasSeoContent ? (
+            <div
+              className={seoContentClassName}
+              dangerouslySetInnerHTML={{ __html: seoContentMarkup }}
+            />
+          ) : null}
+          <p className="text-2xl font-semibold text-brand-dark">
+            Boyama sayfalarını keşfet:
+          </p>
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {extraEntries.map((entry) => {
               if (isChild && entry.id === page.id) {
@@ -165,7 +179,7 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
               return (
                 <div
                   key={entry.id}
-                  className="flex flex-col gap-3 rounded-2xl border border-brand-dark/10 bg-white p-4 shadow-card"
+                  className="flex flex-col gap-2 rounded-2xl border border-brand-dark/10 bg-white p-4 shadow-card"
                 >
                   <Link
                     href={`/${entry.slug}` as Route}

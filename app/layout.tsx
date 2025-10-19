@@ -22,7 +22,7 @@ const plusJakarta = Plus_Jakarta_Sans({
 const siteName = process.env.NEXT_PUBLIC_SITE_NAME ?? "Boyama Sayfaları";
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 const description =
-  "Çocuklar için binlerce ücretsiz boyama sayfaları seni bekliyor. Renklerle hayal gücünü geliştir. Hemen yüksek kaliteli PDF boyama sayfasını indir, yazdır ve boya!";
+  "Çocuklar için ücretsiz ve kaliteli boyama sayfaları. Eğitici, güvenli ve baskıya uygun içeriklerle öğrenmeyi eğlenceli hale getiriyoruz.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

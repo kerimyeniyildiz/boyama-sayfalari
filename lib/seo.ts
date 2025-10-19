@@ -22,7 +22,7 @@ export const siteConfig = {
   url: env.NEXT_PUBLIC_SITE_URL,
   defaultLocale: env.NEXT_PUBLIC_DEFAULT_LOCALE,
   description:
-    "Çocuklar için binlerce ücretsiz boyama sayfaları seni bekliyor. Renklerle hayal gücünü geliştir. Hemen yüksek kaliteli PDF boyama sayfasını indir, yazdır ve boya!"
+    "Çocuklar için ücretsiz ve kaliteli boyama sayfaları. Eğitici, güvenli ve baskıya uygun içeriklerle öğrenmeyi eğlenceli hale getiriyoruz."
 };
 
 export function buildMetadata({

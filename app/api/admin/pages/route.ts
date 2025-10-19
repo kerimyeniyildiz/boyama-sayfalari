@@ -82,6 +82,10 @@ function collectStrings(values: FormDataEntryValue[]): string[] {
     .filter((value) => value.length > 0);
 }
 
+function toRichText(value: FormDataEntryValue | null): string {
+  return typeof value === "string" ? value : "";
+}
+
 function deriveSlugFromFile(file: File) {
   const withoutExtension = file.name.replace(/\.[^/.]+$/, "");
   const normalized = withoutExtension
@@ -263,12 +267,14 @@ export async function POST(request: Request) {
   const rawSlug = toString(formData.get("slug"));
   const submittedCategories = collectStrings(formData.getAll("categories"));
   const submittedTags = collectStrings(formData.getAll("tags"));
+  const seoContentRaw = toRichText(formData.get("seoContent"));
 
   const metadataInput = {
     title,
     slug: rawSlug ? slugifyTr(rawSlug) : slugifyTr(title),
     categories: submittedCategories,
-    tags: submittedTags
+    tags: submittedTags,
+    seoContent: seoContentRaw
   };
 
   const parsed = pageMetadataSchema.safeParse(metadataInput);
@@ -283,6 +289,10 @@ export async function POST(request: Request) {
   }
 
   const metadata = parsed.data;
+  const normalizedSeoContent =
+    typeof metadata.seoContent === "string" && metadata.seoContent.trim().length > 0
+      ? metadata.seoContent.trim()
+      : null;
 
   const [categories, tags] = await Promise.all([
     prisma.category.findMany({
@@ -308,6 +318,7 @@ export async function POST(request: Request) {
         slug: parentSlug,
         title: metadata.title,
         description: `${metadata.title} boyama sayfası.`,
+        seoContent: normalizedSeoContent,
         orientation: "PORTRAIT",
         status: PageStatus.PUBLISHED,
         language: "tr",
@@ -343,6 +354,7 @@ export async function POST(request: Request) {
           slug,
           title: titleFromSlug,
           description: `${titleFromSlug} boyama sayfası.`,
+          seoContent: null,
           orientation: "PORTRAIT",
           status: PageStatus.PUBLISHED,
           language: "tr",
