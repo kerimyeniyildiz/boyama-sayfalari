@@ -97,7 +97,13 @@ function toRichText(value: FormDataEntryValue | null): string {
 }
 
 function normalizeWhitespace(value: string) {
-  return value.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+  return value
+    .normalize("NFC")
+    .replace(/[\u200B-\u200D\u2060\uFEFF]/g, "")
+    .replace(/[\r\n\t]+/g, " ")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function toTitleCaseTr(value: string) {
