@@ -97,9 +97,9 @@ function toRichText(value: FormDataEntryValue | null): string {
 }
 
 function normalizeWhitespace(value: string) {
+  // Türkçe karakterleri koruyarak whitespace normalizasyonu yap
   return value
     .normalize("NFC")
-    .replace(/\p{Cf}/gu, "")
     .replace(/[\r\n\t]+/g, " ")
     .replace(/[_-]+/g, " ")
     .replace(/\s+/g, " ")
