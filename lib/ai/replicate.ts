@@ -92,12 +92,19 @@ export async function generateImageName(prompt: string): Promise<string> {
   }
 
   // Türkçe karakterleri koruyarak temizle - normalize NFC ile başla
+  console.log('[DEBUG generateImageName] rawText from API:', rawText);
+  console.log('[DEBUG generateImageName] rawText charCodes:', Array.from(rawText).map(c => `${c}:${c.charCodeAt(0)}`).slice(0, 50));
+
   const sanitized = rawText
     .normalize("NFC")
     .replace(/[\r\n\t]/g, " ")
     .replace(/["'`]/g, "")
     .replace(/\s+/g, " ")
-    .trim();
+    .trim()
+    .normalize("NFC"); // İkinci kez normalize et
+
+  console.log('[DEBUG generateImageName] After sanitization:', sanitized);
+  console.log('[DEBUG generateImageName] After sanitization charCodes:', Array.from(sanitized).map(c => `${c}:${c.charCodeAt(0)}`).slice(0, 50));
 
   if (sanitized.length === 0) {
     throw new Error("Geçerli görsel adı elde edilemedi");
