@@ -8,6 +8,7 @@ import { pageMetadataSchema } from "@/lib/validation";
 import { slugify } from "@/lib/slug";
 import { generateImageAssets, generatePdfFromImage, getBufferSize } from "@/lib/images";
 import { uploadToR2, deleteFromR2 } from "@/lib/r2";
+import { generateImageBuffer, generateImageName } from "@/lib/ai/replicate";
 
 const slugifyTr = (value: string) =>
   (slugify as unknown as (input: string, options?: any) => string)(value, {
@@ -111,6 +112,58 @@ function humanizeSlug(slug: string) {
     })
     .join(" ");
 }
+
+async function createFilesFromPrompts(prompts: string[]): Promise<File[]> {
+  const files: File[] = [];
+  const usedSlugs = new Set<string>();
+
+  for (let index = 0; index < prompts.length; index += 1) {
+    const originalPrompt = prompts[index];
+    const namingPrompt = `${originalPrompt} << Bu bir görsel üretme promptu. Üretilen görsele üretme promptuna uygun noktalama işareti kullanmadan Türkçe kısa bir isim ver.`;
+
+    let rawName: string;
+    try {
+      rawName = await generateImageName(namingPrompt);
+    } catch (error) {
+      throw new Error(`Görsel adı üretilemedi (satır ${index + 1}): ${(error as Error).message}`);
+    }
+
+    const normalizedName = rawName
+      .replace(/[\r\n\t]/g, " ")
+      .replace(/["'`]/g, "")
+      .trim();
+
+    const fallbackName = `gorsel-${index + 1}`;
+    const slugBase = slugify(normalizedName.length > 0 ? normalizedName : fallbackName) || slugify(fallbackName);
+
+    let uniqueSlug = slugBase;
+    let counter = 2;
+    while (usedSlugs.has(uniqueSlug)) {
+      uniqueSlug = `${slugBase}-${counter}`;
+      counter += 1;
+    }
+    usedSlugs.add(uniqueSlug);
+
+    let imageBuffer: Buffer;
+    try {
+      const result = await generateImageBuffer(originalPrompt);
+      imageBuffer = result.buffer;
+    } catch (error) {
+      throw new Error(`Görsel üretimi başarısız oldu (satır ${index + 1}): ${(error as Error).message}`);
+    }
+
+    const arrayBuffer = imageBuffer.buffer.slice(
+      imageBuffer.byteOffset,
+      imageBuffer.byteOffset + imageBuffer.byteLength
+    ) as ArrayBuffer;
+    const fileData = new Uint8Array(arrayBuffer);
+    const file = new File([fileData], `${uniqueSlug}.jpg`, { type: "image/jpeg" });
+    files.push(file);
+  }
+
+  return files;
+}
+
 
 async function ensureUniqueSlug(baseSlug: string, used: Set<string>) {
   let candidate = baseSlug.length > 0 ? baseSlug : slugifyTr(Date.now().toString());
@@ -230,14 +283,53 @@ export async function POST(request: Request) {
   const extraImages = formData
     .getAll("images")
     .filter((value): value is File => value instanceof File && value.size > 0);
+  const promptFile = formData.get("promptFile");
+  const hasPromptFile = promptFile instanceof File && promptFile.size > 0;
 
-  if (!(rawImage instanceof File) || rawImage.size === 0) {
+  let primaryImage: File | null =
+    rawImage instanceof File && rawImage.size > 0 ? rawImage : null;
+  let additionalImages: File[] = extraImages;
+
+  if (hasPromptFile) {
+    const promptText = await promptFile.text();
+    const promptLines = promptText
+      .split(/[\r\n]+/)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+
+    if (promptLines.length === 0) {
+      return jsonError(
+        400,
+        "PROMPT_FILE_EMPTY",
+        "TXT dosyası boş görünüyor.",
+        {
+          promptFile: ["TXT dosyası en az bir satır içermelidir."]
+        }
+      );
+    }
+
+    let generatedFiles: File[];
+    try {
+      generatedFiles = await createFilesFromPrompts(promptLines);
+    } catch (error) {
+      return jsonError(
+        500,
+        "PROMPT_IMAGE_GENERATION_FAILED",
+        (error as Error).message
+      );
+    }
+
+    primaryImage = generatedFiles[0] ?? null;
+    additionalImages = generatedFiles.slice(1);
+  }
+
+  if (!primaryImage) {
     return jsonError(400, "IMAGE_REQUIRED", "Görsel yüklenmedi.", {
-      image: ["Görsel yüklenmesi zorunludur."]
+      image: ["TXT dosyası sağlamadıysanız en az bir görsel yüklemelisiniz."]
     });
   }
 
-  const allImages = [rawImage, ...extraImages];
+  const allImages = [primaryImage, ...additionalImages];
 
   for (const image of allImages) {
     if (!ALLOWED_IMAGE_TYPES.has(image.type)) {
@@ -311,7 +403,7 @@ export async function POST(request: Request) {
 
   try {
     const parentSlug = await ensureUniqueSlug(metadata.slug, usedSlugs);
-    const parentAssets = await uploadPageAssets(rawImage, parentSlug, uploadedKeys);
+    const parentAssets = await uploadPageAssets(primaryImage, parentSlug, uploadedKeys);
 
     const parentPage = await prisma.coloringPage.create({
       data: {
@@ -343,7 +435,7 @@ export async function POST(request: Request) {
 
     createdSlugs.push(parentSlug);
 
-    for (const file of extraImages) {
+    for (const file of additionalImages) {
       const baseSlug = deriveSlugFromFile(file);
       const slug = await ensureUniqueSlug(baseSlug, usedSlugs);
       const titleFromSlug = humanizeSlug(slug);

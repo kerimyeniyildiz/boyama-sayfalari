@@ -52,6 +52,7 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
   const [formError, setFormError] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<FileList | null>(null);
+  const [promptFile, setPromptFile] = useState<File | null>(null);
 
   const defaultValues: PageFormValues = {
     title: page?.title ?? "",
@@ -84,6 +85,10 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
     formData.append("seoContent", values.seoContent ?? "");
     values.categories.forEach((slug) => formData.append("categories", slug));
     values.tags.forEach((slug) => formData.append("tags", slug));
+
+    if (promptFile) {
+      formData.append("promptFile", promptFile);
+    }
 
     const files = selectedImage ? Array.from(selectedImage) : [];
     if (files.length > 0) {
@@ -269,6 +274,27 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
       </div>
 
       <div className="space-y-2">
+        <Label htmlFor="promptFile">TXT prompt dosyası</Label>
+        <Input
+          id="promptFile"
+          type="file"
+          accept=".txt"
+          disabled={isPending}
+          onChange={(event) => {
+            const file = event.target.files?.[0] ?? null;
+            setPromptFile(file);
+            if (file) {
+              setSelectedImage(null);
+              setImageError(null);
+            }
+          }}
+        />
+        <p className="text-xs text-brand-dark/60">
+          Her satır için bir görsel üretim promptu içeren TXT dosyasını yükleyebilirsiniz. Dosya boşsa bu adım atlanır.
+        </p>
+      </div>
+
+      <div className="space-y-2">
         <Label htmlFor="seoContent">SEO metni</Label>
         <Controller
           name="seoContent"
@@ -306,8 +332,7 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
           }}
         />
         <p className="text-xs text-brand-dark/60">
-          Birden fazla görsel seçebilirsiniz. Yüklemeden önce dikey boyutta
-          olduklarından emin olun; gerekirse otomatik olarak düzenlenecektir.
+          TXT dosyası yüklemediyseniz en az bir dikey görsel seçin. Dosya yüklediyseniz bu alanı boş bırakabilirsiniz.
         </p>
         {imageError ? (
           <p className="text-xs text-red-500">{imageError}</p>
