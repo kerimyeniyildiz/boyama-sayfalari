@@ -36,6 +36,8 @@ type ImageSource = {
   name: string;
   buffer: Buffer;
   mimeType: string;
+  label: string;
+  slugHint: string;
 };
 
 type ErrorResponse = {
@@ -93,16 +95,69 @@ function toRichText(value: FormDataEntryValue | null): string {
   return typeof value === "string" ? value : "";
 }
 
-function deriveSlugFromSource(source: ImageSource) {
-  const withoutExtension = source.name.replace(/\.[^/.]+$/, "");
-  const normalized = withoutExtension
-    .replace(/[_\s]+/g, " ")
-    .replace(/([a-z0-9])([A-Z])/g, (_match, part1: string, part2: string) => `${part1} ${part2}`)
-    .trim();
-  const lowered = normalized.replace(/[A-Z]/g, (character) =>
-    character.toLowerCase()
+function normalizeWhitespace(value: string) {
+  return value.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function toTitleCaseTr(value: string) {
+  if (value.length === 0) {
+    return value;
+  }
+  return value
+    .split(" ")
+    .filter((word) => word.length > 0)
+    .map((word) => {
+      const [first = "", ...rest] = Array.from(word);
+      if (first.length === 0) {
+        return "";
+      }
+      const restJoined = rest.join("");
+      return `${first.toLocaleUpperCase("tr-TR")}${restJoined.toLocaleLowerCase("tr-TR")}`;
+    })
+    .join(" ");
+}
+
+function hasWordCharacters(value: string) {
+  return /\p{L}/u.test(value);
+}
+
+function buildLabelAndSlugHint(rawName: string, fallback: string) {
+  const cleanedRaw = normalizeWhitespace(
+    rawName
+      .normalize("NFC")
+      .replace(/[\r\n\t]/g, " ")
+      .replace(/[\"'`]/g, " ")
   );
-  return slugifyTr(lowered);
+  const cleanedFallback = normalizeWhitespace(
+    fallback
+      .normalize("NFC")
+      .replace(/[\r\n\t]/g, " ")
+  );
+  const rawHasWords = hasWordCharacters(cleanedRaw);
+  const rawHasWhitespace = /\s/.test(cleanedRaw);
+  const fallbackHasWords = hasWordCharacters(cleanedFallback);
+  const baseSource =
+    rawHasWords && rawHasWhitespace
+      ? cleanedRaw
+      : fallbackHasWords
+        ? cleanedFallback
+        : cleanedRaw;
+  const lower = baseSource.toLocaleLowerCase("tr-TR");
+  return {
+    label: toTitleCaseTr(lower),
+    slugHint: baseSource
+  };
+}
+
+function deriveSlugFromSource(source: ImageSource) {
+  const base = source.slugHint && source.slugHint.length > 0 ? source.slugHint : source.name;
+  const withoutExtension = base.replace(/\.[^/.]+$/, "");
+  const normalized = normalizeWhitespace(withoutExtension);
+  const slug = slugifyTr(normalized);
+  if (slug.length > 0) {
+    return slug;
+  }
+  return slugifyTr("gorsel");
 }
 
 function humanizeSlug(slug: string) {
@@ -134,13 +189,10 @@ async function createSourcesFromPrompts(prompts: string[]): Promise<ImageSource[
       throw new Error(`Görsel adı üretilemedi (satır ${index + 1}): ${(error as Error).message}`);
     }
 
-    const normalizedName = rawName
-      .replace(/[\r\n\t]/g, " ")
-      .replace(/[\"'`]/g, "")
-      .trim();
-
     const fallbackName = `gorsel-${index + 1}`;
-    const baseName = normalizedName.length > 0 ? normalizedName : fallbackName;
+    const promptFallback = hasWordCharacters(originalPrompt) ? originalPrompt : fallbackName;
+    const labelInfo = buildLabelAndSlugHint(rawName, promptFallback);
+    const baseName = labelInfo.label.length > 0 ? labelInfo.label : fallbackName;
     let uniqueName = baseName;
     let counter = 2;
     while (usedNames.has(uniqueName)) {
@@ -160,7 +212,10 @@ async function createSourcesFromPrompts(prompts: string[]): Promise<ImageSource[
     sources.push({
       name: `${uniqueName}.jpg`,
       buffer: imageBuffer,
-      mimeType: "image/jpeg"
+      mimeType: "image/jpeg",
+      label: labelInfo.label.length > 0 ? labelInfo.label : toTitleCaseTr(fallbackName),
+      slugHint:
+        labelInfo.slugHint.length > 0 ? labelInfo.slugHint : fallbackName
     });
   }
 
@@ -293,7 +348,16 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(arrayBuffer);
     const name = file.name && file.name.trim().length > 0 ? file.name : fallbackName;
     const mimeType = file.type && file.type.trim().length > 0 ? file.type : "image/jpeg";
-    return { name, buffer, mimeType };
+    const withoutExtension = name.replace(/\.[^/.]+$/, "");
+    const fallbackBase = fallbackName.replace(/\.[^/.]+$/, "");
+    const labelInfo = buildLabelAndSlugHint(withoutExtension, fallbackBase);
+    return {
+      name,
+      buffer,
+      mimeType,
+      label: labelInfo.label,
+      slugHint: labelInfo.slugHint
+    };
   };
 
   const sources: ImageSource[] = [];
@@ -458,14 +522,17 @@ export async function POST(request: Request) {
     for (const imageSource of additionalImages) {
       const baseSlug = deriveSlugFromSource(imageSource);
       const slug = await ensureUniqueSlug(baseSlug, usedSlugs);
-      const titleFromSlug = humanizeSlug(slug);
+      const computedTitle =
+        imageSource.label && imageSource.label.length > 0
+          ? imageSource.label
+          : humanizeSlug(slug);
       const childAssets = await uploadPageAssets(imageSource, slug, uploadedKeys);
 
       await prisma.coloringPage.create({
         data: {
           slug,
-          title: titleFromSlug,
-          description: `${titleFromSlug} boyama sayfası.`,
+          title: computedTitle,
+          description: `${computedTitle} boyama sayfası.`,
           seoContent: null,
           orientation: "PORTRAIT",
           status: PageStatus.PUBLISHED,
