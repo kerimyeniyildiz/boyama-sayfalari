@@ -121,6 +121,39 @@ function hasWordCharacters(value: string) {
   return /\p{L}/u.test(value);
 }
 
+function looksFragmented(value: string) {
+  const tokens = value
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length > 0);
+
+  if (tokens.length <= 1) {
+    return false;
+  }
+
+  const singleLetterTokens = tokens.filter((token) => token.length === 1);
+  const uppercaseSingles = singleLetterTokens.filter(
+    (token) => token === token.toLocaleUpperCase("tr-TR")
+  );
+
+  if (singleLetterTokens.length / tokens.length >= 0.25) {
+    return true;
+  }
+  if (uppercaseSingles.length >= 2) {
+    return true;
+  }
+
+  const slugParts = slugifyTr(value).split("-").filter((part) => part.length > 0);
+  if (slugParts.length > 1) {
+    const shortSlugParts = slugParts.filter((part) => part.length <= 2);
+    if (shortSlugParts.length / slugParts.length >= 0.35) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 function buildLabelAndSlugHint(rawName: string, fallback: string) {
   const cleanedRaw = normalizeWhitespace(
     rawName
@@ -136,8 +169,9 @@ function buildLabelAndSlugHint(rawName: string, fallback: string) {
   const rawHasWords = hasWordCharacters(cleanedRaw);
   const rawHasWhitespace = /\s/.test(cleanedRaw);
   const fallbackHasWords = hasWordCharacters(cleanedFallback);
+  const rawLooksFragmented = rawHasWhitespace && looksFragmented(cleanedRaw);
   const baseSource =
-    rawHasWords && rawHasWhitespace
+    rawHasWords && rawHasWhitespace && !rawLooksFragmented
       ? cleanedRaw
       : fallbackHasWords
         ? cleanedFallback
@@ -190,7 +224,9 @@ async function createSourcesFromPrompts(prompts: string[]): Promise<ImageSource[
     }
 
     const fallbackName = `gorsel-${index + 1}`;
-    const promptFallback = hasWordCharacters(originalPrompt) ? originalPrompt : fallbackName;
+    const promptFallback = hasWordCharacters(originalPrompt)
+      ? originalPrompt
+      : fallbackName;
     const labelInfo = buildLabelAndSlugHint(rawName, promptFallback);
     const baseName = labelInfo.label.length > 0 ? labelInfo.label : fallbackName;
     let uniqueName = baseName;
