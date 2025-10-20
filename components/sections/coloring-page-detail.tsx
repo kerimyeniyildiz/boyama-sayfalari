@@ -106,8 +106,39 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
         </div>
         <div className="flex flex-col justify-between gap-8 rounded-3xl border border-brand-dark/10 bg-white/90 p-8 shadow-card">
           <div className="space-y-4">
-            <h1 className="text-3xl font-semibold text-brand-dark">{page.title}</h1>
-            <p className="text-brand-dark/70">{page.description}</p>
+            <h1 className="text-3xl font-semibold text-brand-dark">
+              {page.title} Boyama Sayfaları
+            </h1>
+            <div className="space-y-3 text-brand-dark/70">
+              <p>{page.description}</p>
+              <div className="space-y-3 rounded-3xl border border-brand-dark/10 bg-white/70 p-4">
+                <p>
+                  Hayal gücünü serbest bırak! Ücretsiz, yüksek çözünürlüklü boyama
+                  sayfalarımızı indir, yazdır ve dilediğin renklerle canlandır.
+                </p>
+                <p>
+                  Her yaşa uygun detaylar içerir; evde, okulda ya da etkinliklerde
+                  kullanıma uygundur. ✨
+                </p>
+                <div className="space-y-1">
+                  <p className="font-semibold text-brand-dark">⬇️ Nasıl İndirilir?</p>
+                  <ol className="list-decimal space-y-1 pl-5">
+                    <li>PDF indir düğmesine tıkla. 🖱️</li>
+                    <li>Açılan dosyada İndir / Kaydet seçeneğini seç. 💾</li>
+                    <li>A4 yazdır 📄 veya tablette/telefonda dijital boya 📱.</li>
+                  </ol>
+                </div>
+                <div className="space-y-1">
+                  <p className="font-semibold text-brand-dark">💡 İpucu</p>
+                  <ul className="list-disc space-y-1 pl-5">
+                    <li>
+                      Kalın alanlar için keçeli 🖊️, detaylar için ince uçlu kalem kullan.
+                    </li>
+                    <li>Bitirdiğinde adını ve tarihi eklemeyi unutma. 📝</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
             <dl className="grid gap-2 text-sm text-brand-dark/70">
               <div className="flex gap-2">
                 <dt className="min-w-[120px] font-medium text-brand-dark">Boyut</dt>
@@ -208,13 +239,20 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
                     <h3 className="text-center text-base font-semibold text-brand-dark">
                       {entry.title}
                     </h3>
-                    <Link
-                      href={entryHref as Route}
-                      className="flex items-center justify-center gap-2 text-sm font-medium text-brand transition hover:text-brand-dark"
-                    >
-                      <ArrowDownToLine className="h-4 w-4" />
-                      Boyama sayfasını indir
-                    </Link>
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      <Button asChild variant="outline" size="sm">
+                        <Link href={entryHref as Route}>Görüntüle</Link>
+                      </Button>
+                      <Button asChild size="sm">
+                        <Link
+                          href={`/api/download/${entry.slug}` as Route}
+                          className="flex items-center gap-2"
+                        >
+                          <ArrowDownToLine className="h-4 w-4" />
+                          PDF indir
+                        </Link>
+                      </Button>
+                    </div>
                   </div>
                 </div>
               );

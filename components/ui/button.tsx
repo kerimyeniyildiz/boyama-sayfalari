@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 const variantClasses: Record<string, string> = {
   default:
-    "bg-brand text-brand-dark hover:bg-brand/90 focus-visible:outline-brand-dark",
+    "bg-brand text-brand-dark hover:bg-brand/90 hover:text-white focus-visible:outline-brand-dark",
   outline:
     "border border-brand-dark/20 text-brand-dark hover:bg-brand-light",
   ghost: "text-brand-dark hover:bg-brand-light/80",

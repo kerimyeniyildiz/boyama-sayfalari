@@ -80,8 +80,8 @@ export async function generateMetadata({ params }: PageProps) {
   const createdAt = normalizeDate(page.createdAt);
   const updatedAt = normalizeDate(page.updatedAt);
   const baseTitle = page.title.trim().length > 0 ? page.title.trim() : page.slug;
-  const title = `${baseTitle} Boyama Sayfası - Yüksek Kalite PDF - (Ücretsiz)`;
-  const description = `En güzel ${baseTitle} boyama sayfalarını hemen indir! Ücretsiz, yazdırmaya uygun ve eğlenceli ${baseTitle} çizimlerini boyamaya başla.`;
+  const title = `${baseTitle} Boyama Sayfaları - Yüksek Kalite PDF - (Ücretsiz)`;
+  const description = `En güzel ${baseTitle} boyama sayfalarını hemen indir! Ücretsiz, yazdırmaya uygun ve eğlenceli çizimlerimizi boyamaya başla.`;
 
   return buildMetadata({
     title,

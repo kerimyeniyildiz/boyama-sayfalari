@@ -29,7 +29,7 @@ export function SiteFooter() {
       <div className="border-t border-brand-dark/10 py-4">
         <div className="container flex flex-col gap-2 text-xs text-brand-dark/60 sm:flex-row sm:items-center sm:justify-between">
           <span>© {currentYear} {siteName}</span>
-          <span>Tasarım: Figma → Next.js dönüşümü. Kodlama: Kerim Yeniyıldız</span>
+          <span>Kodlama: Kerim Yeniyıldız</span>
         </div>
       </div>
     </footer>
