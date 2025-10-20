@@ -32,6 +32,12 @@ const ALLOWED_IMAGE_TYPES = new Set([
   "image/svg+xml"
 ]);
 
+type ImageSource = {
+  name: string;
+  buffer: Buffer;
+  mimeType: string;
+};
+
 type ErrorResponse = {
   error: {
     code: string;
@@ -87,8 +93,8 @@ function toRichText(value: FormDataEntryValue | null): string {
   return typeof value === "string" ? value : "";
 }
 
-function deriveSlugFromFile(file: File) {
-  const withoutExtension = file.name.replace(/\.[^/.]+$/, "");
+function deriveSlugFromSource(source: ImageSource) {
+  const withoutExtension = source.name.replace(/\.[^/.]+$/, "");
   const normalized = withoutExtension
     .replace(/[_\s]+/g, " ")
     .replace(/([a-z0-9])([A-Z])/g, (_match, part1: string, part2: string) => `${part1} ${part2}`)
@@ -113,9 +119,9 @@ function humanizeSlug(slug: string) {
     .join(" ");
 }
 
-async function createFilesFromPrompts(prompts: string[]): Promise<File[]> {
-  const files: File[] = [];
-  const usedSlugs = new Set<string>();
+async function createSourcesFromPrompts(prompts: string[]): Promise<ImageSource[]> {
+  const sources: ImageSource[] = [];
+  const usedNames = new Set<string>();
 
   for (let index = 0; index < prompts.length; index += 1) {
     const originalPrompt = prompts[index];
@@ -130,19 +136,18 @@ async function createFilesFromPrompts(prompts: string[]): Promise<File[]> {
 
     const normalizedName = rawName
       .replace(/[\r\n\t]/g, " ")
-      .replace(/["'`]/g, "")
+      .replace(/[\"'`]/g, "")
       .trim();
 
     const fallbackName = `gorsel-${index + 1}`;
-    const slugBase = slugify(normalizedName.length > 0 ? normalizedName : fallbackName) || slugify(fallbackName);
-
-    let uniqueSlug = slugBase;
+    const baseName = normalizedName.length > 0 ? normalizedName : fallbackName;
+    let uniqueName = baseName;
     let counter = 2;
-    while (usedSlugs.has(uniqueSlug)) {
-      uniqueSlug = `${slugBase}-${counter}`;
+    while (usedNames.has(uniqueName)) {
+      uniqueName = `${baseName}-${counter}`;
       counter += 1;
     }
-    usedSlugs.add(uniqueSlug);
+    usedNames.add(uniqueName);
 
     let imageBuffer: Buffer;
     try {
@@ -152,18 +157,15 @@ async function createFilesFromPrompts(prompts: string[]): Promise<File[]> {
       throw new Error(`Görsel üretimi başarısız oldu (satır ${index + 1}): ${(error as Error).message}`);
     }
 
-    const arrayBuffer = imageBuffer.buffer.slice(
-      imageBuffer.byteOffset,
-      imageBuffer.byteOffset + imageBuffer.byteLength
-    ) as ArrayBuffer;
-    const fileData = new Uint8Array(arrayBuffer);
-    const file = new File([fileData], `${uniqueSlug}.jpg`, { type: "image/jpeg" });
-    files.push(file);
+    sources.push({
+      name: `${uniqueName}.jpg`,
+      buffer: imageBuffer,
+      mimeType: "image/jpeg"
+    });
   }
 
-  return files;
+  return sources;
 }
-
 
 async function ensureUniqueSlug(baseSlug: string, used: Set<string>) {
   let candidate = baseSlug.length > 0 ? baseSlug : slugifyTr(Date.now().toString());
@@ -186,11 +188,11 @@ async function ensureUniqueSlug(baseSlug: string, used: Set<string>) {
 }
 
 async function uploadPageAssets(
-  file: File,
+  source: ImageSource,
   slug: string,
   uploadedKeys: string[]
 ) {
-  const imageBuffer = Buffer.from(await file.arrayBuffer());
+  const imageBuffer = source.buffer;
   const pdfBuffer = await generatePdfFromImage(imageBuffer);
   const assets = await generateImageAssets(imageBuffer);
 
@@ -277,23 +279,42 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const formData = await request.formData();
 
-  const rawImage = (formData.get("image") ?? formData.get("cover")) as
+  const rawImageFile = (formData.get("image") ?? formData.get("cover")) as
     | File
     | null;
-  const extraImages = formData
+  const extraImageFiles = formData
     .getAll("images")
     .filter((value): value is File => value instanceof File && value.size > 0);
   const promptFile = formData.get("promptFile");
   const hasPromptFile = promptFile instanceof File && promptFile.size > 0;
 
-  let primaryImage: File | null =
-    rawImage instanceof File && rawImage.size > 0 ? rawImage : null;
-  let additionalImages: File[] = extraImages;
+  const convertFileToSource = async (file: File, fallbackName: string): Promise<ImageSource> => {
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const name = file.name && file.name.trim().length > 0 ? file.name : fallbackName;
+    const mimeType = file.type && file.type.trim().length > 0 ? file.type : "image/jpeg";
+    return { name, buffer, mimeType };
+  };
+
+  const sources: ImageSource[] = [];
+
+  if (rawImageFile instanceof File && rawImageFile.size > 0 && !hasPromptFile) {
+    sources.push(await convertFileToSource(rawImageFile, "ana-gorsel.jpg"));
+  }
+
+  if (!hasPromptFile && extraImageFiles.length > 0) {
+    const extraSources = await Promise.all(
+      extraImageFiles.map((file, index) =>
+        convertFileToSource(file, `ek-gorsel-${index + 1}.jpg`)
+      )
+    );
+    sources.push(...extraSources);
+  }
 
   if (hasPromptFile) {
     const promptText = await promptFile.text();
     const promptLines = promptText
-      .split(/[\r\n]+/)
+      .split(/\r?\n/)
       .map((line) => line.trim())
       .filter((line) => line.length > 0);
 
@@ -308,9 +329,9 @@ export async function POST(request: Request) {
       );
     }
 
-    let generatedFiles: File[];
+    let generatedSources: ImageSource[];
     try {
-      generatedFiles = await createFilesFromPrompts(promptLines);
+      generatedSources = await createSourcesFromPrompts(promptLines);
     } catch (error) {
       return jsonError(
         500,
@@ -319,20 +340,19 @@ export async function POST(request: Request) {
       );
     }
 
-    primaryImage = generatedFiles[0] ?? null;
-    additionalImages = generatedFiles.slice(1);
+    sources.push(...generatedSources);
   }
 
-  if (!primaryImage) {
+  if (sources.length === 0) {
     return jsonError(400, "IMAGE_REQUIRED", "Görsel yüklenmedi.", {
       image: ["TXT dosyası sağlamadıysanız en az bir görsel yüklemelisiniz."]
     });
   }
 
-  const allImages = [primaryImage, ...additionalImages];
+  const [primaryImage, ...additionalImages] = sources;
 
-  for (const image of allImages) {
-    if (!ALLOWED_IMAGE_TYPES.has(image.type)) {
+  for (const image of sources) {
+    if (!ALLOWED_IMAGE_TYPES.has(image.mimeType)) {
       return jsonError(
         400,
         "INVALID_IMAGE_TYPE",
@@ -343,7 +363,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (image.size > MAX_IMAGE_SIZE) {
+    if (image.buffer.byteLength > MAX_IMAGE_SIZE) {
       return jsonError(
         400,
         "IMAGE_TOO_LARGE",
@@ -435,11 +455,11 @@ export async function POST(request: Request) {
 
     createdSlugs.push(parentSlug);
 
-    for (const file of additionalImages) {
-      const baseSlug = deriveSlugFromFile(file);
+    for (const imageSource of additionalImages) {
+      const baseSlug = deriveSlugFromSource(imageSource);
       const slug = await ensureUniqueSlug(baseSlug, usedSlugs);
       const titleFromSlug = humanizeSlug(slug);
-      const childAssets = await uploadPageAssets(file, slug, uploadedKeys);
+      const childAssets = await uploadPageAssets(imageSource, slug, uploadedKeys);
 
       await prisma.coloringPage.create({
         data: {
