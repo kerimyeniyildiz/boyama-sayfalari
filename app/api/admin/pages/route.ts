@@ -122,39 +122,6 @@ function hasWordCharacters(value: string) {
   return /\p{L}/u.test(value);
 }
 
-function looksFragmented(value: string) {
-  const tokens = value
-    .split(/\s+/)
-    .map((token) => token.trim())
-    .filter((token) => token.length > 0);
-
-  if (tokens.length <= 1) {
-    return false;
-  }
-
-  const singleLetterTokens = tokens.filter((token) => token.length === 1);
-  const uppercaseSingles = singleLetterTokens.filter(
-    (token) => token === token.toLocaleUpperCase("tr-TR")
-  );
-
-  if (singleLetterTokens.length / tokens.length >= 0.25) {
-    return true;
-  }
-  if (uppercaseSingles.length >= 2) {
-    return true;
-  }
-
-  const slugParts = slugifyTr(value).split("-").filter((part) => part.length > 0);
-  if (slugParts.length > 1) {
-    const shortSlugParts = slugParts.filter((part) => part.length <= 2);
-    if (shortSlugParts.length / slugParts.length >= 0.35) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
 function normalizeForComparison(value: string) {
   return value
     .normalize("NFC")
@@ -174,19 +141,15 @@ function buildLabelAndSlugHint(rawName: string, fallback: string) {
       .normalize("NFC")
       .replace(/[\r\n\t]/g, " ")
   );
-  const rawHasWords = hasWordCharacters(cleanedRaw);
-  const rawHasWhitespace = /\s/.test(cleanedRaw);
-  const fallbackHasWords = hasWordCharacters(cleanedFallback);
-  const rawLooksFragmented = rawHasWhitespace && looksFragmented(cleanedRaw);
-  const baseSource =
-    rawHasWords && rawHasWhitespace && !rawLooksFragmented
-      ? cleanedRaw
-      : fallbackHasWords
-        ? cleanedFallback
-        : cleanedRaw;
-  const lower = baseSource.toLocaleLowerCase("tr-TR");
+  let baseSource = cleanedRaw;
+  if (!hasWordCharacters(baseSource)) {
+    baseSource = cleanedFallback;
+  }
+  if (!hasWordCharacters(baseSource)) {
+    baseSource = "Boyama Sayfası";
+  }
   return {
-    label: toTitleCaseTr(lower),
+    label: baseSource,
     slugHint: baseSource
   };
 }
@@ -236,7 +199,9 @@ async function createSourcesFromPrompts(prompts: string[]): Promise<ImageSource[
       ? originalPrompt
       : fallbackName;
     const labelInfo = buildLabelAndSlugHint(rawName, promptFallback);
-    const baseName = labelInfo.label.length > 0 ? labelInfo.label : fallbackName;
+    const label = labelInfo.label.trim();
+    const slugHint = labelInfo.slugHint.trim();
+    const baseName = label.length > 0 ? label : fallbackName;
     let uniqueName = baseName;
     let counter = 2;
     while (usedNames.has(uniqueName)) {
@@ -257,9 +222,8 @@ async function createSourcesFromPrompts(prompts: string[]): Promise<ImageSource[
       name: `${uniqueName}.jpg`,
       buffer: imageBuffer,
       mimeType: "image/jpeg",
-      label: labelInfo.label.length > 0 ? labelInfo.label : toTitleCaseTr(fallbackName),
-      slugHint:
-        labelInfo.slugHint.length > 0 ? labelInfo.slugHint : fallbackName
+      label: label.length > 0 ? label : toTitleCaseTr(fallbackName),
+      slugHint: slugHint.length > 0 ? slugHint : fallbackName
     });
   }
 
@@ -395,12 +359,14 @@ export async function POST(request: Request) {
     const withoutExtension = name.replace(/\.[^/.]+$/, "");
     const fallbackBase = fallbackName.replace(/\.[^/.]+$/, "");
     const labelInfo = buildLabelAndSlugHint(withoutExtension, fallbackBase);
+    const label = labelInfo.label.trim();
+    const slugHint = labelInfo.slugHint.trim();
     return {
       name,
       buffer,
       mimeType,
-      label: labelInfo.label,
-      slugHint: labelInfo.slugHint
+      label: label.length > 0 ? label : fallbackBase,
+      slugHint: slugHint.length > 0 ? slugHint : fallbackBase
     };
   };
 
