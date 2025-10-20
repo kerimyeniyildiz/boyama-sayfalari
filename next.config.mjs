@@ -7,10 +7,11 @@ if (process.env.R2_PUBLIC_URL) {
     const url = new URL(process.env.R2_PUBLIC_URL);
     const pathname =
       url.pathname === "/" ? "/**" : `${url.pathname.replace(/\/$/, "")}/**`;
+    const hostname = url.hostname.replace(/\.$/, "");
 
     remotePatterns.push({
       protocol: url.protocol.replace(":", ""),
-      hostname: url.hostname,
+      hostname,
       pathname
     });
   } catch (error) {

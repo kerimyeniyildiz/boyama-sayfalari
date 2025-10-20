@@ -18,9 +18,24 @@ const client = new S3Client({
   }
 });
 
+function sanitizePublicBaseUrl(rawUrl: string): string {
+  try {
+    const parsed = new URL(rawUrl);
+    parsed.hostname = parsed.hostname.replace(/\.$/, "");
+    parsed.pathname = parsed.pathname.replace(/\/$/, "");
+    parsed.hash = "";
+    parsed.search = "";
+    return parsed.toString().replace(/\/$/, "");
+  } catch {
+    return rawUrl.trim().replace(/\.$/, "").replace(/\/$/, "");
+  }
+}
+
+const publicBaseUrl = sanitizePublicBaseUrl(env.R2_PUBLIC_URL);
+
 export function getPublicUrl(key: string): string {
-  const base = env.R2_PUBLIC_URL.replace(/\/$/, "");
-  return `${base}/${key}`;
+  const normalizedKey = key.replace(/^\/+/, "");
+  return `${publicBaseUrl}/${normalizedKey}`;
 }
 
 export async function uploadToR2(options: {
