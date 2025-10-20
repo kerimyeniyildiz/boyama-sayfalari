@@ -136,17 +136,20 @@ function normalizeForComparison(value: string) {
 }
 
 function buildLabelAndSlugHint(rawName: string, fallback: string) {
-  const cleanedRaw = normalizeWhitespace(
-    rawName
-      .normalize("NFC")
-      .replace(/[\r\n\t]/g, " ")
-      .replace(/[\"'`]/g, " ")
-  );
-  const cleanedFallback = normalizeWhitespace(
-    fallback
-      .normalize("NFC")
-      .replace(/[\r\n\t]/g, " ")
-  );
+  // Türkçe karakterleri koruyarak temizleme yap
+  const cleanedRaw = rawName
+    .normalize("NFC")
+    .replace(/[\r\n\t]/g, " ")
+    .replace(/["'`]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const cleanedFallback = fallback
+    .normalize("NFC")
+    .replace(/[\r\n\t]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
   let baseSource = cleanedRaw;
   if (!hasWordCharacters(baseSource)) {
     baseSource = cleanedFallback;

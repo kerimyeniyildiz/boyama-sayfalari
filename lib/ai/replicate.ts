@@ -26,7 +26,8 @@ async function requestReplicate<TOutput = unknown>(
   const response = await fetch(`${REPLICATE_API_BASE}/models/${modelPath}/predictions`, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
+      "Content-Type": "application/json; charset=utf-8",
+      "Accept": "application/json; charset=utf-8",
       Authorization: `Token ${env.REPLICATE_API_TOKEN}`
     },
     body: JSON.stringify({ input })
@@ -43,6 +44,7 @@ async function requestReplicate<TOutput = unknown>(
     await sleep(2000);
     const poll = await fetch(prediction.urls.get, {
       headers: {
+        "Accept": "application/json; charset=utf-8",
         Authorization: `Token ${env.REPLICATE_API_TOKEN}`
       }
     });
@@ -89,9 +91,12 @@ export async function generateImageName(prompt: string): Promise<string> {
     throw new Error("Boş görsel adı üretildi");
   }
 
+  // Türkçe karakterleri koruyarak temizle - normalize NFC ile başla
   const sanitized = rawText
+    .normalize("NFC")
     .replace(/[\r\n\t]/g, " ")
     .replace(/["'`]/g, "")
+    .replace(/\s+/g, " ")
     .trim();
 
   if (sanitized.length === 0) {
