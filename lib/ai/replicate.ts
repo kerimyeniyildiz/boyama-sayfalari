@@ -79,13 +79,29 @@ export async function generateImageName(prompt: string): Promise<string> {
   const output = prediction.output;
   let rawText: string | null = null;
 
+  const serializeToken = (token: unknown): string => {
+    if (typeof token === "string") {
+      return token;
+    }
+    if (token && typeof token === "object") {
+      if ("text" in token && typeof (token as { text?: unknown }).text === "string") {
+        return (token as { text: string }).text;
+      }
+      if ("token" in token && typeof (token as { token?: unknown }).token === "string") {
+        return (token as { token: string }).token;
+      }
+      return `${token}`;
+    }
+    if (token === null || token === undefined) {
+      return "";
+    }
+    return String(token);
+  };
+
   if (typeof output === "string") {
     rawText = output;
   } else if (Array.isArray(output)) {
-    // Replicate API streaming ile token bazında döndürüyor
-    // ["Do", "ğ", "um", " G", "ünü", " Kut", "lam", "ası"] gibi
-    // Kural: Token boşlukla başlıyorsa yeni kelime, başlamıyorsa önceki kelimenin devamı
-    rawText = output.join("");
+    rawText = output.map(serializeToken).join("");
   } else if (output && typeof output === "object" && "text" in output) {
     rawText = String((output as { text: unknown }).text);
   }
@@ -94,20 +110,11 @@ export async function generateImageName(prompt: string): Promise<string> {
     throw new Error("Boş görsel adı üretildi");
   }
 
-  // Replicate API bazen Türkçe karakterlerden önce/sonra ekstra boşluk ekliyor
-  // Örn: "Do ğ um" yerine "Doğum" olmalı
-  // Türkçe karakterler: çÇğĞıİöÖşŞüÜ
-  const turkishChars = '[çÇğĞıİöÖşŞüÜ]';
-
   const sanitized = rawText
     .normalize("NFC")
+    .replace(/\p{Cf}/gu, "")
     .replace(/[\r\n\t]/g, " ")
     .replace(/["'`]/g, "")
-    // Türkçe karakterlerden önceki boşluğu kaldır (örn: "Do ğum" → "Doğum")
-    .replace(new RegExp(`\\s+(?=${turkishChars})`, 'g'), "")
-    // Türkçe karakterlerden sonraki boşluğu kaldır (örn: "ğ um" → "ğum")
-    .replace(new RegExp(`(${turkishChars})\\s+`, 'g'), "$1")
-    // Çift boşlukları tekle indir
     .replace(/\s+/g, " ")
     .trim()
     .normalize("NFC");
