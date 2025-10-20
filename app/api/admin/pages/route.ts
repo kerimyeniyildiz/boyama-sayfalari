@@ -137,18 +137,12 @@ function normalizeForComparison(value: string) {
 
 function buildLabelAndSlugHint(rawName: string, fallback: string) {
   // Türkçe karakterleri koruyarak temizleme yap
-  console.log('[DEBUG buildLabelAndSlugHint] Input rawName:', rawName);
-  console.log('[DEBUG buildLabelAndSlugHint] Input charCodes:', Array.from(rawName).map(c => c.charCodeAt(0)));
-
   const cleanedRaw = rawName
     .normalize("NFC")
     .replace(/[\r\n\t]/g, " ")
     .replace(/["'`]/g, "")
     .replace(/\s+/g, " ")
     .trim();
-
-  console.log('[DEBUG buildLabelAndSlugHint] After cleaning:', cleanedRaw);
-  console.log('[DEBUG buildLabelAndSlugHint] After cleaning charCodes:', Array.from(cleanedRaw).map(c => c.charCodeAt(0)));
 
   const cleanedFallback = fallback
     .normalize("NFC")
@@ -163,8 +157,6 @@ function buildLabelAndSlugHint(rawName: string, fallback: string) {
   if (!hasWordCharacters(baseSource)) {
     baseSource = "Boyama Sayfası";
   }
-
-  console.log('[DEBUG buildLabelAndSlugHint] Final baseSource:', baseSource);
 
   return {
     label: baseSource,
@@ -208,8 +200,6 @@ async function createSourcesFromPrompts(prompts: string[]): Promise<ImageSource[
     let rawName: string;
     try {
       rawName = await generateImageName(namingPrompt);
-      console.log('[DEBUG] Replicate API\'den dönen rawName:', rawName);
-      console.log('[DEBUG] rawName charCodes:', Array.from(rawName).map(c => c.charCodeAt(0)));
     } catch (error) {
       throw new Error(`Görsel adı üretilemedi (satır ${index + 1}): ${(error as Error).message}`);
     }
@@ -219,8 +209,6 @@ async function createSourcesFromPrompts(prompts: string[]): Promise<ImageSource[
       ? originalPrompt
       : fallbackName;
     const labelInfo = buildLabelAndSlugHint(rawName, promptFallback);
-    console.log('[DEBUG] buildLabelAndSlugHint sonrası label:', labelInfo.label);
-    console.log('[DEBUG] label charCodes:', Array.from(labelInfo.label).map(c => c.charCodeAt(0)));
     const label = labelInfo.label.trim();
     const slugHint = labelInfo.slugHint.trim();
     const baseName = label.length > 0 ? label : fallbackName;
