@@ -83,9 +83,25 @@ export async function generateImageName(prompt: string): Promise<string> {
     rawText = output;
   } else if (Array.isArray(output)) {
     // Replicate API streaming ile token bazında döndürüyor
-    // ["Do", "ğ", "um", " G", "ünü"] gibi
-    // Boşluk olmadan birleştir, zaten token'lar içinde boşluk varsa korunur
-    rawText = output.join("");
+    // ["Do", "ğ", "um", " G", "ünü", " Kut", "lam", "ası"] gibi
+    // Token'ları birleştirirken akıllı boşluk ekle:
+    // - Token zaten boşlukla başlıyorsa, olduğu gibi ekle
+    // - Token boşlukla başlamıyorsa ama önceki token harf/rakamla bitiyorsa, boşluk ekle
+    rawText = output.reduce((acc: string, token: string, index: number) => {
+      if (index === 0) return token;
+
+      // Token zaten boşlukla başlıyorsa direkt ekle
+      if (token.startsWith(" ")) return acc + token;
+
+      // Önceki token harf/rakamla bitiyorsa ve şu anki token harf/rakamla başlıyorsa boşluk ekle
+      const lastChar = acc[acc.length - 1];
+      const firstChar = token[0];
+      if (lastChar && firstChar && /[\p{L}\p{N}]/u.test(lastChar) && /[\p{L}\p{N}]/u.test(firstChar)) {
+        return acc + " " + token;
+      }
+
+      return acc + token;
+    }, "");
   } else if (output && typeof output === "object" && "text" in output) {
     rawText = String((output as { text: unknown }).text);
   }
