@@ -99,7 +99,7 @@ function toRichText(value: FormDataEntryValue | null): string {
 function normalizeWhitespace(value: string) {
   return value
     .normalize("NFC")
-    .replace(/[\u200B-\u200D\u2060\uFEFF]/g, "")
+    .replace(/\p{Cf}/gu, "")
     .replace(/[\r\n\t]+/g, " ")
     .replace(/[_-]+/g, " ")
     .replace(/\s+/g, " ")
