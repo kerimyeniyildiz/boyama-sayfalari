@@ -82,7 +82,10 @@ export async function generateImageName(prompt: string): Promise<string> {
   if (typeof output === "string") {
     rawText = output;
   } else if (Array.isArray(output)) {
-    rawText = output.join(" ");
+    // Replicate API streaming ile token bazında döndürüyor
+    // ["Do", "ğ", "um", " G", "ünü"] gibi
+    // Boşluk olmadan birleştir, zaten token'lar içinde boşluk varsa korunur
+    rawText = output.join("");
   } else if (output && typeof output === "object" && "text" in output) {
     rawText = String((output as { text: unknown }).text);
   }
