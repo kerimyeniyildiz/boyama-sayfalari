@@ -10,6 +10,7 @@ import {
   getBufferSize
 } from "@/lib/images";
 import { uploadToR2, deleteFromR2 } from "@/lib/r2";
+import { buildColoringPagePath } from "@/lib/page-paths";
 
 const slugifyTr = (value: string) =>
   (slugify as unknown as (input: string, options?: any) => string)(value, {
@@ -224,7 +225,7 @@ export async function POST(
 
   const uploadedKeys: string[] = [];
   const usedSlugs = new Set<string>([parent.slug]);
-  const createdSlugs: string[] = [];
+  const createdPages: Array<{ slug: string; parentSlug: string }> = [];
 
   try {
     for (const file of imageFiles) {
@@ -261,7 +262,7 @@ export async function POST(
         }
       });
 
-      createdSlugs.push(slug);
+      createdPages.push({ slug, parentSlug: parent.slug });
     }
   } catch (error) {
     await Promise.all(
@@ -279,14 +280,14 @@ export async function POST(
   revalidatePath("/ara");
   revalidatePath("/admin/pages");
   revalidatePath(`/admin/pages/${parent.id}/edit`);
-  revalidatePath(`/${parent.slug}`);
-  createdSlugs.forEach((slug) => {
-    revalidatePath(`/${slug}`);
+  revalidatePath(buildColoringPagePath({ slug: parent.slug, parentSlug: null }));
+  createdPages.forEach((entry) => {
+    revalidatePath(buildColoringPagePath(entry));
   });
   const categorySlugs = new Set(parent.categories.map((entry) => entry.category.slug));
   const tagSlugs = new Set(parent.tags.map((entry) => entry.tag.slug));
   categorySlugs.forEach((slug) => revalidatePath(`/kategori/${slug}`));
   tagSlugs.forEach((slug) => revalidatePath(`/etiket/${slug}`));
 
-  return NextResponse.json({ success: true, created: createdSlugs.length });
+  return NextResponse.json({ success: true, created: createdPages.length });
 }

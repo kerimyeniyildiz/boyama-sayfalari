@@ -6,6 +6,7 @@ import { pageMetadataSchema } from "@/lib/validation";
 import { slugify } from "@/lib/slug";
 import { generateImageAssets, generatePdfFromImage, getBufferSize } from "@/lib/images";
 import { uploadToR2, deleteFromR2 } from "@/lib/r2";
+import { buildColoringPagePath } from "@/lib/page-paths";
 
 const slugifyTr = (value: string) =>
   (slugify as unknown as (input: string, options?: any) => string)(value, {
@@ -307,12 +308,12 @@ export async function PUT(
 
     revalidatePath("/");
     revalidatePath("/ara");
-    revalidatePath(`/${updatedPage.slug}`);
+    revalidatePath(buildColoringPagePath(updatedPage));
     if (slugChanged) {
-      revalidatePath(`/${existingPage.slug}`);
+      revalidatePath(buildColoringPagePath(existingPage));
     }
     if (updatedPage.parent?.slug) {
-      revalidatePath(`/${updatedPage.parent.slug}`);
+      revalidatePath(buildColoringPagePath({ slug: updatedPage.parent.slug, parentSlug: null }));
     }
     metadata.categories.forEach((slug) => {
       revalidatePath(`/kategori/${slug}`);
@@ -385,11 +386,15 @@ export async function DELETE(
 
   const categorySlugs = new Set(page.categories.map((entry) => entry.category.slug));
   const tagSlugs = new Set(page.tags.map((entry) => entry.tag.slug));
-  const slugsToRevalidate = new Set<string>([page.slug]);
+  const pathsToRevalidate = new Set<string>([buildColoringPagePath(page)]);
   if (page.parent?.slug) {
-    slugsToRevalidate.add(page.parent.slug);
+    pathsToRevalidate.add(buildColoringPagePath({ slug: page.parent.slug, parentSlug: null }));
   }
-  page.children.forEach((child) => slugsToRevalidate.add(child.slug));
+  page.children.forEach((child) => {
+    pathsToRevalidate.add(
+      buildColoringPagePath({ slug: child.slug, parentSlug: page.slug })
+    );
+  });
 
   const keysToRemove = new Set<string>();
   collectKeys(page).forEach((key) => keysToRemove.add(key));
@@ -425,8 +430,8 @@ export async function DELETE(
   if (page.parent?.id) {
     revalidatePath(`/admin/pages/${page.parent.id}/edit`);
   }
-  slugsToRevalidate.forEach((slug) => {
-    revalidatePath(`/${slug}`);
+  pathsToRevalidate.forEach((path) => {
+    revalidatePath(path);
   });
   for (const slug of categorySlugs) {
     revalidatePath(`/kategori/${slug}`);

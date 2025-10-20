@@ -24,7 +24,8 @@ export async function getDashboardStats() {
           slug: true,
           createdAt: true,
           status: true,
-          downloads: true
+          downloads: true,
+          parent: { select: { slug: true } }
         }
       }),
       prisma.downloadEvent.findMany({
@@ -36,7 +37,8 @@ export async function getDashboardStats() {
           page: {
             select: {
               title: true,
-              slug: true
+              slug: true,
+              parent: { select: { slug: true } }
             }
           },
           userAgent: true

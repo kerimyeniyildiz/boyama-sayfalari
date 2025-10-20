@@ -1,9 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { Route } from "next";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { FALLBACK_BLUR_DATA_URL } from "@/lib/placeholders";
+import { buildColoringPagePath } from "@/lib/page-paths";
 import { getPublicUrl } from "@/lib/r2";
 import { cn } from "@/lib/utils";
 import type { ColoringPageSummary } from "@/lib/data/coloring-pages";
@@ -41,11 +43,12 @@ export function ColoringPageCard({
 }: ColoringPageCardProps) {
   const { large, small } = getThumbUrls(page);
   const hasOptimized = large !== FALLBACK_BLUR_DATA_URL;
+  const pageHref = buildColoringPagePath(page) as Route;
 
   return (
     <Card className={cn("h-full overflow-hidden", className)}>
       <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-brand-light">
-        <Link href={`/${page.slug}`}>
+        <Link href={pageHref}>
           <Image
             src={large}
             alt={page.title}
@@ -63,10 +66,7 @@ export function ColoringPageCard({
         </div>
       </div>
       <CardContent className="pt-6">
-        <Link
-          href={`/${page.slug}`}
-          className="text-lg font-semibold text-brand-dark"
-        >
+        <Link href={pageHref} className="text-lg font-semibold text-brand-dark">
           {page.title}
         </Link>
         <p className="mt-2 line-clamp-2 text-sm text-brand-dark/70">

@@ -1,10 +1,11 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { getColoringPageBySlug } from "@/lib/data/coloring-pages";
 import { getPublicUrl } from "@/lib/r2";
 import { buildCreativeWorkJsonLd, buildMetadata, siteConfig } from "@/lib/seo";
 import { JsonLd } from "@/components/seo/json-ld";
 import { ColoringPageDetail } from "@/components/sections/coloring-page-detail";
+import { buildColoringPagePath, buildColoringPageUrl } from "@/lib/page-paths";
 
 export const dynamic = "force-dynamic";
 
@@ -14,54 +15,78 @@ function normalizeDate(
   if (!value) {
     return undefined;
   }
+
   if (value instanceof Date) {
     return value;
   }
+
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }
 
-function formatSlugForTitle(slug: string) {
-  return slug
-    .split("-")
-    .filter(Boolean)
-    .map((part) => {
-      const lower = part.toLocaleLowerCase("tr-TR");
-      return lower.charAt(0).toLocaleUpperCase("tr-TR") + lower.slice(1);
-    })
-    .join(" ");
-}
-
 type PageProps = {
   params: {
-    slug: string;
+    slug?: string[];
   };
 };
 
-export async function generateMetadata({ params }: PageProps) {
-  const page = await getColoringPageBySlug(params.slug);
+function extractSlugParams(params: PageProps["params"]) {
+  const segments = params.slug ?? [];
 
-  const formattedSlug = formatSlugForTitle(params.slug);
+  if (!Array.isArray(segments) || segments.length === 0 || segments.length > 2) {
+    return null;
+  }
+
+  const childSlug = segments[segments.length - 1];
+  const parentSlug = segments.length === 2 ? segments[0] : null;
+
+  return { childSlug, parentSlug };
+}
+
+export async function generateMetadata({ params }: PageProps) {
+  const slugParams = extractSlugParams(params);
+
+  if (!slugParams) {
+    return buildMetadata({
+      title: "Boyama sayfası bulunamadı",
+      description: siteConfig.description,
+      path: "/"
+    });
+  }
+
+  const page = await getColoringPageBySlug(slugParams.childSlug);
 
   if (!page) {
     return buildMetadata({
       title: "Boyama sayfası bulunamadı",
       description: siteConfig.description,
-      path: `/${params.slug}`
+      path: `/${slugParams.childSlug}`
     });
   }
 
+  if (
+    slugParams.parentSlug &&
+    page.parent?.slug !== slugParams.parentSlug
+  ) {
+    return buildMetadata({
+      title: "Boyama sayfası bulunamadı",
+      description: siteConfig.description,
+      path: `/${slugParams.parentSlug}/${slugParams.childSlug}`
+    });
+  }
+
+  const path = buildColoringPagePath(page);
   const imageUrl = getPublicUrl(page.thumbWebpKey);
   const createdAt = normalizeDate(page.createdAt);
   const updatedAt = normalizeDate(page.updatedAt);
-
-  const title = `${formattedSlug} Boyama Sayfaları - Yüksek Kalite PDF - (Ücretsiz)`;
-  const description = `En güzel ${formattedSlug} boyama sayfalarını hemen indir! Ücretsiz, yazdırmaya uygun ve eğlenceli ${formattedSlug} çizimlerini boyamaya başla.`;
+  const baseTitle = page.title.trim().length > 0 ? page.title.trim() : page.slug;
+  const title = `${baseTitle} Boyama Sayfası - Yüksek Kalite PDF - (Ücretsiz)`;
+  const description = `En güzel ${baseTitle} boyama sayfalarını hemen indir! Ücretsiz, yazdırmaya uygun ve eğlenceli ${baseTitle} çizimlerini boyamaya başla.`;
 
   return buildMetadata({
     title,
     description,
-    path: `/${page.slug}`,
+    path,
     image: {
       url: imageUrl,
       width: page.width ?? undefined,
@@ -75,21 +100,39 @@ export async function generateMetadata({ params }: PageProps) {
 }
 
 export default async function ColoringPageRoute({ params }: PageProps) {
-  const page = await getColoringPageBySlug(params.slug);
+  const slugParams = extractSlugParams(params);
+
+  if (!slugParams) {
+    notFound();
+  }
+
+  const { childSlug, parentSlug } = slugParams;
+  const page = await getColoringPageBySlug(childSlug);
 
   if (!page || page.status !== "PUBLISHED") {
     notFound();
+  }
+
+  const canonicalPath = buildColoringPagePath(page);
+
+  if (parentSlug && page.parent?.slug !== parentSlug) {
+    notFound();
+  }
+
+  if (!parentSlug && page.parent?.slug) {
+    redirect(canonicalPath);
   }
 
   const pdfUrl = getPublicUrl(page.pdfKey);
   const imageUrl = getPublicUrl(page.thumbWebpKey);
   const createdAt = normalizeDate(page.createdAt);
   const updatedAt = normalizeDate(page.updatedAt);
+  const canonicalUrl = buildColoringPageUrl(page, siteConfig.url);
 
   const jsonLd = buildCreativeWorkJsonLd({
     name: page.title,
     description: page.description,
-    url: `${siteConfig.url}/${page.slug}`,
+    url: canonicalUrl,
     pdfUrl,
     image: {
       url: imageUrl,

@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import type { AdminPageListResult } from "@/lib/data/admin/pages";
 import { AdminPageDeleteButton } from "@/components/admin/admin-page-delete-button";
+import { buildColoringPagePath } from "@/lib/page-paths";
 
 type AdminPageListProps = AdminPageListResult;
 
@@ -161,7 +162,7 @@ export function AdminPageList({ items, pagination, filters }: AdminPageListProps
                         </Button>
                         <Button asChild size="sm" variant="ghost">
                           <Link
-                            href={`/${page.slug}` as Route}
+                            href={buildColoringPagePath({ slug: page.slug }) as Route}
                             target="_blank"
                             rel="noreferrer"
                           >

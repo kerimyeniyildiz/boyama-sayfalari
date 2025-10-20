@@ -103,7 +103,8 @@ export async function searchColoringPages(filters: SearchFilters) {
     where: { id: { in: ids } },
     include: {
       categories: { include: { category: true } },
-      tags: { include: { tag: true } }
+      tags: { include: { tag: true } },
+      parent: { select: { slug: true } }
     }
   });
 

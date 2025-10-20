@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getTagWithPages } from "@/lib/data/coloring-pages";
 import { buildCollectionJsonLd, buildMetadata, siteConfig } from "@/lib/seo";
 import { getPublicUrl } from "@/lib/r2";
+import { buildColoringPageUrl } from "@/lib/page-paths";
 import { JsonLd } from "@/components/seo/json-ld";
 import { TagCollection } from "@/components/sections/tag-collection";
 
@@ -45,7 +46,7 @@ export default async function TagPage({ params }: PageProps) {
     url: `${siteConfig.url}/etiket/${tag.slug}`,
     items: tag.pages.map((page) => ({
       name: page.title,
-      url: `${siteConfig.url}/${page.slug}`,
+      url: buildColoringPageUrl(page, siteConfig.url),
       image: getPublicUrl(page.thumbWebpKey),
       description: page.description
     }))

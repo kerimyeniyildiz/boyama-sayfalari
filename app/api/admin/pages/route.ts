@@ -9,6 +9,7 @@ import { slugify } from "@/lib/slug";
 import { generateImageAssets, generatePdfFromImage, getBufferSize } from "@/lib/images";
 import { uploadToR2, deleteFromR2 } from "@/lib/r2";
 import { generateImageBuffer, generateImageName } from "@/lib/ai/replicate";
+import { buildColoringPagePath } from "@/lib/page-paths";
 
 const slugifyTr = (value: string) =>
   (slugify as unknown as (input: string, options?: any) => string)(value, {
@@ -152,6 +153,13 @@ function looksFragmented(value: string) {
   }
 
   return false;
+}
+
+function normalizeForComparison(value: string) {
+  return value
+    .normalize("NFC")
+    .toLocaleLowerCase("tr-TR")
+    .replace(/[^a-z0-9çğıöşü]/g, "");
 }
 
 function buildLabelAndSlugHint(rawName: string, fallback: string) {
@@ -397,6 +405,7 @@ export async function POST(request: Request) {
   };
 
   const sources: ImageSource[] = [];
+  let promptLines: string[] = [];
 
   if (rawImageFile instanceof File && rawImageFile.size > 0 && !hasPromptFile) {
     sources.push(await convertFileToSource(rawImageFile, "ana-gorsel.jpg"));
@@ -413,12 +422,12 @@ export async function POST(request: Request) {
 
   if (hasPromptFile) {
     const promptText = await promptFile.text();
-    const promptLines = promptText
+    const promptLinesRaw = promptText
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter((line) => line.length > 0);
 
-    if (promptLines.length === 0) {
+    if (promptLinesRaw.length === 0) {
       return jsonError(
         400,
         "PROMPT_FILE_EMPTY",
@@ -429,9 +438,11 @@ export async function POST(request: Request) {
       );
     }
 
+    promptLines = promptLinesRaw;
+
     let generatedSources: ImageSource[];
     try {
-      generatedSources = await createSourcesFromPrompts(promptLines);
+      generatedSources = await createSourcesFromPrompts(promptLinesRaw);
     } catch (error) {
       return jsonError(
         500,
@@ -481,9 +492,51 @@ export async function POST(request: Request) {
   const submittedTags = collectStrings(formData.getAll("tags"));
   const seoContentRaw = toRichText(formData.get("seoContent"));
 
+  const trimmedTitle = title.trim();
+  const trimmedSlugInput = rawSlug.trim();
+  const fallbackTitle = primaryImage.label?.trim() ?? "";
+  const fallbackSlug = deriveSlugFromSource(primaryImage);
+  const normalizedTitleKey = trimmedTitle.length > 0 ? normalizeForComparison(trimmedTitle) : "";
+  const normalizedFirstPrompt =
+    hasPromptFile && promptLines.length > 0
+      ? normalizeForComparison(promptLines[0])
+      : "";
+
+  let effectiveTitle = trimmedTitle;
+  if (
+    hasPromptFile &&
+    fallbackTitle.length >= 3 &&
+    (effectiveTitle.length < 3 ||
+      (normalizedFirstPrompt.length > 0 &&
+        normalizedTitleKey === normalizedFirstPrompt))
+  ) {
+    effectiveTitle = fallbackTitle;
+  }
+
+  if (effectiveTitle.length < 3 && fallbackTitle.length >= 3) {
+    effectiveTitle = fallbackTitle;
+  }
+
+  if (effectiveTitle.length < 3 && fallbackSlug.length > 0) {
+    effectiveTitle = humanizeSlug(fallbackSlug);
+  }
+
+  if (effectiveTitle.length < 3) {
+    effectiveTitle = "Boyama Sayfası";
+  }
+
+  const slugSource = trimmedSlugInput.length > 0 ? trimmedSlugInput : effectiveTitle;
+  let effectiveSlug = slugifyTr(slugSource);
+  if (!effectiveSlug && fallbackSlug.length > 0) {
+    effectiveSlug = fallbackSlug;
+  }
+  if (!effectiveSlug) {
+    effectiveSlug = slugifyTr(Date.now().toString());
+  }
+
   const metadataInput = {
-    title,
-    slug: rawSlug ? slugifyTr(rawSlug) : slugifyTr(title),
+    title: effectiveTitle,
+    slug: effectiveSlug,
     categories: submittedCategories,
     tags: submittedTags,
     seoContent: seoContentRaw
@@ -518,7 +571,7 @@ export async function POST(request: Request) {
   ]);
 
   const uploadedKeys: string[] = [];
-  const createdSlugs: string[] = [];
+  const createdPages: Array<{ slug: string; parentSlug?: string | null }> = [];
   const usedSlugs = new Set<string>();
 
   try {
@@ -553,7 +606,7 @@ export async function POST(request: Request) {
       }
     });
 
-    createdSlugs.push(parentSlug);
+    createdPages.push({ slug: parentSlug, parentSlug: null });
 
     for (const imageSource of additionalImages) {
       const baseSlug = deriveSlugFromSource(imageSource);
@@ -593,15 +646,14 @@ export async function POST(request: Request) {
         }
       });
 
-      createdSlugs.push(slug);
+      createdPages.push({ slug, parentSlug });
     }
 
     revalidatePath("/");
     revalidatePath("/ara");
     revalidatePath("/admin/pages");
-    revalidatePath(`/${parentSlug}`);
-    createdSlugs.slice(1).forEach((slug) => {
-      revalidatePath(`/${slug}`);
+    createdPages.forEach((entry) => {
+      revalidatePath(buildColoringPagePath(entry));
     });
     metadata.categories.forEach((slug) => {
       revalidatePath(`/kategori/${slug}`);

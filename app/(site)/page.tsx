@@ -6,6 +6,7 @@ import {
   getTagsWithCounts
 } from "@/lib/data/coloring-pages";
 import { getPublicUrl } from "@/lib/r2";
+import { buildColoringPageUrl } from "@/lib/page-paths";
 import { JsonLd } from "@/components/seo/json-ld";
 import { HeroSection } from "@/components/sections/hero-section";
 import { FeaturedGrid } from "@/components/sections/featured-grid";
@@ -38,7 +39,7 @@ export default async function HomePage() {
     url: siteConfig.url,
     items: featured.map((page) => ({
       name: page.title,
-      url: `${siteConfig.url}/${page.slug}`,
+      url: buildColoringPageUrl(page, siteConfig.url),
       image: getPublicUrl(page.thumbWebpKey),
       description: page.description
     }))

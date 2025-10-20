@@ -6,6 +6,7 @@ import { ArrowDownToLine, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ColoringPageDetail } from "@/lib/data/coloring-pages";
 import { FALLBACK_BLUR_DATA_URL } from "@/lib/placeholders";
+import { buildColoringPagePath } from "@/lib/page-paths";
 import { getPublicUrl } from "@/lib/r2";
 
 type PageEntry = {
@@ -17,6 +18,7 @@ type PageEntry = {
   thumbWebpKey: string | null;
   width: number | null;
   height: number | null;
+  parentSlug?: string | null;
 };
 
 type DetailedPage =
@@ -24,7 +26,10 @@ type DetailedPage =
   | ColoringPageDetail["children"][number]
   | NonNullable<ColoringPageDetail["parent"]>;
 
-function toPageEntry(entry: DetailedPage): PageEntry {
+function toPageEntry(
+  entry: DetailedPage,
+  parentSlug?: string | null
+): PageEntry {
   return {
     id: entry.id,
     slug: entry.slug,
@@ -33,7 +38,8 @@ function toPageEntry(entry: DetailedPage): PageEntry {
     coverImageKey: entry.coverImageKey,
     thumbWebpKey: entry.thumbWebpKey,
     width: entry.width,
-    height: entry.height
+    height: entry.height,
+    parentSlug
   };
 }
 
@@ -60,13 +66,14 @@ function resolveImageKeys(entry: PageEntry) {
 
 function buildExtraEntries(page: ColoringPageDetail): PageEntry[] {
   if (page.parent) {
+    const parentSlug = page.parent.slug ?? null;
     const siblings = page.parent.children
       .filter((child) => child.id !== page.id)
-      .map((child) => toPageEntry(child));
-    return [toPageEntry(page.parent), ...siblings];
+      .map((child) => toPageEntry(child, parentSlug));
+    return [toPageEntry(page.parent, null), ...siblings];
   }
 
-  return page.children.map((child) => toPageEntry(child));
+  return page.children.map((child) => toPageEntry(child, page.slug));
 }
 
 const seoContentClassName =
@@ -170,6 +177,7 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
                 return null;
               }
 
+              const entryHref = buildColoringPagePath(entry);
               const {
                 large: entryImage,
                 blur: entryBlur,
@@ -182,7 +190,7 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
                   className="flex flex-col gap-2 rounded-2xl border border-brand-dark/10 bg-white p-4 shadow-card"
                 >
                   <Link
-                    href={`/${entry.slug}` as Route}
+                    href={entryHref as Route}
                     className="relative block aspect-[3/4] overflow-hidden rounded-xl bg-brand-light"
                   >
                     <Image
@@ -201,7 +209,7 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
                       {entry.title}
                     </h3>
                     <Link
-                      href={`/${entry.slug}` as Route}
+                      href={entryHref as Route}
                       className="flex items-center justify-center gap-2 text-sm font-medium text-brand transition hover:text-brand-dark"
                     >
                       <ArrowDownToLine className="h-4 w-4" />

@@ -9,6 +9,7 @@ export type ColoringPageSummary = Prisma.ColoringPageGetPayload<{
   include: {
     categories: { include: { category: true } };
     tags: { include: { tag: true } };
+    parent: { select: { slug: true } };
   };
 }>;
 
@@ -83,7 +84,8 @@ export async function getFeaturedPages(
         take: limit,
         include: {
           categories: { include: { category: true } },
-          tags: { include: { tag: true } }
+          tags: { include: { tag: true } },
+          parent: { select: { slug: true } }
         }
       })
   );
@@ -101,7 +103,8 @@ export async function getRecentPages(
         take: limit,
         include: {
           categories: { include: { category: true } },
-          tags: { include: { tag: true } }
+          tags: { include: { tag: true } },
+          parent: { select: { slug: true } }
         }
       })
   );
@@ -222,7 +225,8 @@ export async function getRelatedPages(
       where,
       include: {
         categories: { include: { category: true } },
-        tags: { include: { tag: true } }
+        tags: { include: { tag: true } },
+        parent: { select: { slug: true } }
       },
       take: limit,
       orderBy: [{ downloads: "desc" }, { createdAt: "desc" }]
@@ -309,7 +313,8 @@ export async function getPagesByCategorySlug(
         orderBy: { createdAt: "desc" },
         include: {
           categories: { include: { category: true } },
-          tags: { include: { tag: true } }
+          tags: { include: { tag: true } },
+          parent: { select: { slug: true } }
         }
       })
   );
@@ -329,7 +334,8 @@ export async function getPagesByTagSlug(
         orderBy: { createdAt: "desc" },
         include: {
           categories: { include: { category: true } },
-          tags: { include: { tag: true } }
+          tags: { include: { tag: true } },
+          parent: { select: { slug: true } }
         }
       })
   );
@@ -347,7 +353,8 @@ export async function getCategoryWithPages(slug: string) {
               page: {
                 include: {
                   categories: { include: { category: true } },
-                  tags: { include: { tag: true } }
+                  tags: { include: { tag: true } },
+                  parent: { select: { slug: true } }
                 }
               }
             },
@@ -379,7 +386,8 @@ export async function getTagWithPages(slug: string) {
               page: {
                 include: {
                   categories: { include: { category: true } },
-                  tags: { include: { tag: true } }
+                  tags: { include: { tag: true } },
+                  parent: { select: { slug: true } }
                 }
               }
             },

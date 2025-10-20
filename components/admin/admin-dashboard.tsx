@@ -1,8 +1,10 @@
 import Link from "next/link";
+import type { Route } from "next";
 import { ArrowUpRight } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { buildColoringPagePath } from "@/lib/page-paths";
 
 type DashboardStats = {
   totalPages: number;
@@ -17,6 +19,7 @@ type DashboardStats = {
     createdAt: Date;
     status: string;
     downloads: number;
+    parent?: { slug: string | null } | null;
   }>;
   downloadEvents: Array<{
     id: string;
@@ -25,6 +28,7 @@ type DashboardStats = {
     page: {
       title: string;
       slug: string;
+      parent?: { slug: string | null } | null;
     };
   }>;
 };
@@ -114,7 +118,7 @@ export function AdminDashboard({ stats }: AdminDashboardProps) {
               >
                 <div>
                   <Link
-                    href={`/${page.slug}`}
+                    href={buildColoringPagePath(page) as Route}
                     className="text-sm font-semibold text-brand-dark hover:text-brand"
                   >
                     {page.title}
@@ -149,7 +153,7 @@ export function AdminDashboard({ stats }: AdminDashboardProps) {
               >
                 <div>
                   <Link
-                    href={`/${event.page.slug}`}
+                    href={buildColoringPagePath(event.page) as Route}
                     className="text-sm font-semibold text-brand-dark hover:text-brand"
                   >
                     {event.page.title}

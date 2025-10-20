@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 
 import { prisma } from "@/lib/db";
 import { siteConfig } from "@/lib/seo";
+import { buildColoringPagePath } from "@/lib/page-paths";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = siteConfig.url.replace(/\/$/, "");
@@ -25,15 +26,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const [pages, categories, tags] = await Promise.all([
       prisma.coloringPage.findMany({
         where: { status: "PUBLISHED" },
-        select: { slug: true, updatedAt: true }
+        select: {
+          slug: true,
+          updatedAt: true,
+          parent: { select: { slug: true } }
+        }
       }),
       prisma.category.findMany({ select: { slug: true, updatedAt: true } }),
       prisma.tag.findMany({ select: { slug: true, updatedAt: true } })
     ]);
 
     for (const page of pages) {
+      const path = buildColoringPagePath(page);
       entries.push({
-        url: `${baseUrl}/${page.slug}`,
+        url: `${baseUrl}${path}`,
         lastModified: page.updatedAt,
         changeFrequency: "weekly",
         priority: 0.9
