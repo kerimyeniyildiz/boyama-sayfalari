@@ -111,7 +111,7 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
             </h1>
             <div className="space-y-3 text-brand-dark/70">
               <p>{page.description}</p>
-              <div className="space-y-3 bg-white/70 p-4 text-xs leading-relaxed md:text-[0.85rem]">
+              <div className="space-y-3 bg-white/70 text-xs leading-relaxed md:text-[0.85rem]">
                 <p>
                   Hayal gücünü serbest bırak! Ücretsiz, yüksek çözünürlüklü boyama
                   sayfalarımızı indir, yazdır ve dilediğin renklerle canlandır.
@@ -122,7 +122,7 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
                 </p>
                 <div className="space-y-1">
                   <p className="font-semibold text-brand-dark">⬇️ Nasıl İndirilir?</p>
-                  <ol className="list-decimal space-y-1 pl-5">
+                  <ol className="list-decimal pl-5">
                     <li>PDF indir düğmesine tıkla. 🖱️</li>
                     <li>Açılan dosyada İndir / Kaydet seçeneğini seç. 💾</li>
                     <li>A4 yazdır 🖨️ veya tablette/telefonda dijital boya 📱.</li>
@@ -130,7 +130,7 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
                 </div>
                 <div className="space-y-1">
                   <p className="font-semibold text-brand-dark">💡 İpucu</p>
-                  <ul className="list-disc space-y-1 pl-5">
+                  <ul className="list-disc pl-5">
                     <li>
                       Kalın alanlar için keçeli 🖊️, detaylar için ince uçlu kalem kullan.
                     </li>
