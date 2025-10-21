@@ -1,4 +1,4 @@
-﻿import Image from "next/image";
+import Image from "next/image";
 import Link from "next/link";
 import type { Route } from "next";
 import { ArrowDownToLine, FileDown } from "lucide-react";
@@ -107,34 +107,34 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
         <div className="flex flex-col justify-between gap-8 rounded-3xl border border-brand-dark/10 bg-white/90 p-8 shadow-card">
           <div className="space-y-4">
             <h1 className="text-3xl font-semibold text-brand-dark">
-              {page.title} Boyama SayfalarÄ±
+              {page.title} Boyama Sayfaları
             </h1>
             <div className="space-y-3 text-brand-dark/70">
               <p>{page.description}</p>
               <div className="space-y-3 border border-brand-dark/10 bg-white/70 p-4 text-sm leading-relaxed md:text-[0.95rem]">
                 <p>
-                  Hayal gÃ¼cÃ¼nÃ¼ serbest bÄ±rak! Ãœcretsiz, yÃ¼ksek Ã§Ã¶zÃ¼nÃ¼rlÃ¼klÃ¼ boyama
-                  sayfalarÄ±mÄ±zÄ± indir, yazdÄ±r ve dilediÄŸin renklerle canlandÄ±r.
+                  Hayal gücünü serbest bırak! Ücretsiz, yüksek çözünürlüklü boyama
+                  sayfalarımızı indir, yazdır ve dilediğin renklerle canlandır.
                 </p>
                 <p>
-                  Her yaÅŸa uygun detaylar iÃ§erir; evde, okulda ya da etkinliklerde
-                  kullanÄ±ma uygundur. âœ¨
+                  Her yaşa uygun detaylar içerir; evde, okulda ya da etkinliklerde
+                  kullanıma uygundur. ✨
                 </p>
                 <div className="space-y-1">
-                  <p className="font-semibold text-brand-dark">â¬‡ï¸ NasÄ±l Ä°ndirilir?</p>
+                  <p className="font-semibold text-brand-dark">⬇️ Nasıl İndirilir?</p>
                   <ol className="list-decimal space-y-1 pl-5">
-                    <li>PDF indir dÃ¼ÄŸmesine tÄ±kla. ğŸ–±ï¸</li>
-                    <li>AÃ§Ä±lan dosyada Ä°ndir / Kaydet seÃ§eneÄŸini seÃ§. ğŸ’¾</li>
-                    <li>A4 yazdÄ±r ğŸ“„ veya tablette/telefonda dijital boya ğŸ“±.</li>
+                    <li>PDF indir düğmesine tıkla. 🖱️</li>
+                    <li>Açılan dosyada İndir / Kaydet seçeneğini seç. 💾</li>
+                    <li>A4 yazdır 🖨️ veya tablette/telefonda dijital boya 📱.</li>
                   </ol>
                 </div>
                 <div className="space-y-1">
-                  <p className="font-semibold text-brand-dark">ğŸ’¡ Ä°pucu</p>
+                  <p className="font-semibold text-brand-dark">💡 İpucu</p>
                   <ul className="list-disc space-y-1 pl-5">
                     <li>
-                      KalÄ±n alanlar iÃ§in keÃ§eli ğŸ–Šï¸, detaylar iÃ§in ince uÃ§lu kalem kullan.
+                      Kalın alanlar için keçeli 🖊️, detaylar için ince uçlu kalem kullan.
                     </li>
-                    <li>BitirdiÄŸinde adÄ±nÄ± ve tarihi eklemeyi unutma. ğŸ“</li>
+                    <li>Bitirdiğinde adını ve tarihi eklemeyi unutma. 📝</li>
                   </ul>
                 </div>
               </div>
@@ -143,7 +143,7 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
               <div className="flex gap-2">
                 <dt className="min-w-[120px] font-medium text-brand-dark">Boyut</dt>
                 <dd>
-                  {primaryEntry.width ?? "?"}Ã—{primaryEntry.height ?? "?"} px Â·{" "}
+                  {primaryEntry.width ?? "?"}×{primaryEntry.height ?? "?"} px ·{" "}
                   {Math.round((page.fileSizeBytes ?? 0) / 1024)} KB
                 </dd>
               </div>
@@ -200,7 +200,7 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
             />
           ) : null}
           <p className="text-2xl font-semibold text-brand-dark">
-            Boyama sayfalarÄ±nÄ± keÅŸfet:
+            Boyama sayfalarını keşfet:
           </p>
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {extraEntries.map((entry) => {
@@ -241,7 +241,7 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
                     </h3>
                     <div className="flex flex-wrap items-center justify-center gap-2">
                       <Button asChild variant="outline" size="sm">
-                        <Link href={entryHref as Route}>GÃ¶rÃ¼ntÃ¼le</Link>
+                        <Link href={entryHref as Route}>Görüntüle</Link>
                       </Button>
                       <Button asChild size="sm">
                         <Link
