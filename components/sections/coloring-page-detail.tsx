@@ -111,7 +111,7 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
             </h1>
             <div className="space-y-3 text-brand-dark/70">
               <p>{page.description}</p>
-              <div className="space-y-3 border border-brand-dark/10 bg-white/70 p-4 text-sm leading-relaxed md:text-[0.95rem]">
+              <div className="space-y-3 bg-white/70 p-4 text-xs leading-relaxed md:text-[0.85rem]">
                 <p>
                   Hayal gücünü serbest bırak! Ücretsiz, yüksek çözünürlüklü boyama
                   sayfalarımızı indir, yazdır ve dilediğin renklerle canlandır.
