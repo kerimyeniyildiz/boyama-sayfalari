@@ -25,7 +25,7 @@ function resolveParentSlug(page: ParentLike): string | null | undefined {
 export function buildColoringPagePath(page: PageLike): string {
   const parentSlug = resolveParentSlug(page);
   if (parentSlug) {
-    return `/${parentSlug}/${page.slug}`;
+    return `/${parentSlug}`;
   }
   return `/${page.slug}`;
 }

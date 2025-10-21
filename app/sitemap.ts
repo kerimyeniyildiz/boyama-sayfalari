@@ -25,7 +25,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const [pages, categories, tags] = await Promise.all([
       prisma.coloringPage.findMany({
-        where: { status: "PUBLISHED" },
+        where: { status: "PUBLISHED", parentId: null },
         select: {
           slug: true,
           updatedAt: true,

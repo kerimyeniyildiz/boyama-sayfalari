@@ -30,21 +30,20 @@ type PageProps = {
   };
 };
 
-function extractSlugParams(params: PageProps["params"]) {
+function resolveSlugParams(params: PageProps["params"]) {
   const segments = params.slug ?? [];
 
-  if (!Array.isArray(segments) || segments.length === 0 || segments.length > 2) {
+  if (!Array.isArray(segments) || segments.length === 0) {
     return null;
   }
 
-  const childSlug = segments[segments.length - 1];
-  const parentSlug = segments.length === 2 ? segments[0] : null;
+  const [primarySlug, ...extraSegments] = segments;
 
-  return { childSlug, parentSlug };
+  return { primarySlug, extraSegments };
 }
 
 export async function generateMetadata({ params }: PageProps) {
-  const slugParams = extractSlugParams(params);
+  const slugParams = resolveSlugParams(params);
 
   if (!slugParams) {
     return buildMetadata({
@@ -54,32 +53,26 @@ export async function generateMetadata({ params }: PageProps) {
     });
   }
 
-  const page = await getColoringPageBySlug(slugParams.childSlug);
+  const { primarySlug } = slugParams;
+  const page = await getColoringPageBySlug(primarySlug);
 
   if (!page) {
     return buildMetadata({
       title: "Boyama sayfası bulunamadı",
       description: siteConfig.description,
-      path: `/${slugParams.childSlug}`
+      path: `/${primarySlug}`
     });
   }
 
-  if (
-    slugParams.parentSlug &&
-    page.parent?.slug !== slugParams.parentSlug
-  ) {
-    return buildMetadata({
-      title: "Boyama sayfası bulunamadı",
-      description: siteConfig.description,
-      path: `/${slugParams.parentSlug}/${slugParams.childSlug}`
-    });
-  }
-
-  const path = buildColoringPagePath(page);
-  const imageUrl = getPublicUrl(page.thumbWebpKey);
-  const createdAt = normalizeDate(page.createdAt);
-  const updatedAt = normalizeDate(page.updatedAt);
-  const baseTitle = page.title.trim().length > 0 ? page.title.trim() : page.slug;
+  const metadataPage = page.parent ?? page;
+  const path = buildColoringPagePath(metadataPage);
+  const imageUrl = getPublicUrl(metadataPage.thumbWebpKey);
+  const createdAt = normalizeDate(metadataPage.createdAt);
+  const updatedAt = normalizeDate(metadataPage.updatedAt);
+  const baseTitle =
+    metadataPage.title.trim().length > 0
+      ? metadataPage.title.trim()
+      : metadataPage.slug;
   const title = `${baseTitle} Boyama Sayfaları - Yüksek Kalite PDF - (Ücretsiz)`;
   const description = `En güzel ${baseTitle} boyama sayfalarını hemen indir! Ücretsiz, yazdırmaya uygun ve eğlenceli çizimlerimizi boyamaya başla.`;
 
@@ -89,9 +82,9 @@ export async function generateMetadata({ params }: PageProps) {
     path,
     image: {
       url: imageUrl,
-      width: page.width ?? undefined,
-      height: page.height ?? undefined,
-      alt: page.title
+      width: metadataPage.width ?? undefined,
+      height: metadataPage.height ?? undefined,
+      alt: metadataPage.title
     },
     type: "article",
     publishedTime: createdAt?.toISOString(),
@@ -100,27 +93,26 @@ export async function generateMetadata({ params }: PageProps) {
 }
 
 export default async function ColoringPageRoute({ params }: PageProps) {
-  const slugParams = extractSlugParams(params);
+  const slugParams = resolveSlugParams(params);
 
   if (!slugParams) {
     notFound();
   }
 
-  const { childSlug, parentSlug } = slugParams;
-  const page = await getColoringPageBySlug(childSlug);
+  const { primarySlug, extraSegments } = slugParams;
+
+  if (extraSegments.length > 0) {
+    redirect(`/${primarySlug}`);
+  }
+
+  const page = await getColoringPageBySlug(primarySlug);
 
   if (!page || page.status !== "PUBLISHED") {
     notFound();
   }
 
-  const canonicalPath = buildColoringPagePath(page);
-
-  if (parentSlug && page.parent?.slug !== parentSlug) {
-    notFound();
-  }
-
-  if (!parentSlug && page.parent?.slug) {
-    redirect(canonicalPath);
+  if (page.parent?.slug) {
+    redirect(buildColoringPagePath(page));
   }
 
   const pdfUrl = getPublicUrl(page.pdfKey);
