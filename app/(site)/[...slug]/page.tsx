@@ -1,6 +1,8 @@
+import { unstable_cache } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 
 import { getColoringPageBySlug } from "@/lib/data/coloring-pages";
+import { generateColoringPageDescription } from "@/lib/ai/replicate";
 import { getPublicUrl } from "@/lib/r2";
 import { buildCreativeWorkJsonLd, buildMetadata, siteConfig } from "@/lib/seo";
 import { JsonLd } from "@/components/seo/json-ld";
@@ -8,6 +10,15 @@ import { ColoringPageDetail } from "@/components/sections/coloring-page-detail";
 import { buildColoringPagePath, buildColoringPageUrl } from "@/lib/page-paths";
 
 export const dynamic = "force-dynamic";
+
+const DESCRIPTION_CACHE_SECONDS = 60 * 60 * 24;
+
+const getGeneratedDescription = unstable_cache(
+  async (slug: string, title: string) =>
+    generateColoringPageDescription({ slug, title }),
+  ["coloring-page-description"],
+  { revalidate: DESCRIPTION_CACHE_SECONDS }
+);
 
 function normalizeDate(
   value: Date | string | null | undefined
@@ -115,25 +126,32 @@ export default async function ColoringPageRoute({ params }: PageProps) {
     redirect(buildColoringPagePath(page));
   }
 
-  const pdfUrl = getPublicUrl(page.pdfKey);
-  const imageUrl = getPublicUrl(page.thumbWebpKey);
-  const createdAt = normalizeDate(page.createdAt);
-  const updatedAt = normalizeDate(page.updatedAt);
-  const canonicalUrl = buildColoringPageUrl(page, siteConfig.url);
+  const generatedDescription = await getGeneratedDescription(page.slug, page.title);
+
+  const pageWithGeneratedDescription = {
+    ...page,
+    description: generatedDescription
+  };
+
+  const pdfUrl = getPublicUrl(pageWithGeneratedDescription.pdfKey);
+  const imageUrl = getPublicUrl(pageWithGeneratedDescription.thumbWebpKey);
+  const createdAt = normalizeDate(pageWithGeneratedDescription.createdAt);
+  const updatedAt = normalizeDate(pageWithGeneratedDescription.updatedAt);
+  const canonicalUrl = buildColoringPageUrl(pageWithGeneratedDescription, siteConfig.url);
 
   const jsonLd = buildCreativeWorkJsonLd({
-    name: page.title,
-    description: page.description,
+    name: pageWithGeneratedDescription.title,
+    description: pageWithGeneratedDescription.description,
     url: canonicalUrl,
     pdfUrl,
     image: {
       url: imageUrl,
-      width: page.width ?? undefined,
-      height: page.height ?? undefined
+      width: pageWithGeneratedDescription.width ?? undefined,
+      height: pageWithGeneratedDescription.height ?? undefined
     },
     keywords: [
-      ...page.categories.map((entry) => entry.category.name),
-      ...page.tags.map((entry) => entry.tag.name)
+      ...pageWithGeneratedDescription.categories.map((entry) => entry.category.name),
+      ...pageWithGeneratedDescription.tags.map((entry) => entry.tag.name)
     ],
     datePublished: createdAt?.toISOString(),
     dateModified: updatedAt?.toISOString()
@@ -141,7 +159,7 @@ export default async function ColoringPageRoute({ params }: PageProps) {
 
   return (
     <>
-      <ColoringPageDetail page={page} />
+      <ColoringPageDetail page={pageWithGeneratedDescription} />
       <JsonLd data={jsonLd} />
     </>
   );

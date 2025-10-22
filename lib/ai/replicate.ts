@@ -67,6 +67,76 @@ async function requestReplicate<TOutput = unknown>(
   return prediction;
 }
 
+function serializeToken(token: unknown): string {
+  if (typeof token === "string") {
+    return token;
+  }
+  if (token && typeof token === "object") {
+    if ("text" in token && typeof (token as { text?: unknown }).text === "string") {
+      return (token as { text: string }).text;
+    }
+    if ("token" in token && typeof (token as { token?: unknown }).token === "string") {
+      return (token as { token: string }).token;
+    }
+    return `${token}`;
+  }
+  if (token === null || token === undefined) {
+    return "";
+  }
+  return String(token);
+}
+
+function extractRawText(output: unknown): string | null {
+  if (typeof output === "string") {
+    return output;
+  }
+
+  if (Array.isArray(output)) {
+    return output.map(serializeToken).join("");
+  }
+
+  if (output && typeof output === "object" && "text" in output) {
+    return String((output as { text: unknown }).text);
+  }
+
+  return null;
+}
+
+function sanitizeGeneratedText(rawText: string): string {
+  return rawText
+    .normalize("NFC")
+    .replace(/\p{Cf}/gu, "")
+    .replace(/[\r\n\t]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .normalize("NFC");
+}
+
+function enforceMaxLength(text: string, maxLength: number): string {
+  if (text.length <= maxLength) {
+    return text;
+  }
+
+  const truncated = text.slice(0, maxLength).trimEnd();
+  const lastSpace = truncated.lastIndexOf(" ");
+
+  if (lastSpace === -1) {
+    return truncated;
+  }
+
+  return truncated.slice(0, lastSpace).trimEnd();
+}
+
+function ensureStartsWithSlugKeyword(text: string, slugKeyword: string): string {
+  const normalizedText = text.trim();
+
+  if (normalizedText.toLowerCase().startsWith(slugKeyword.toLowerCase())) {
+    return normalizedText;
+  }
+
+  return `${slugKeyword} ${normalizedText}`.trim();
+}
+
 export async function generateImageName(prompt: string): Promise<string> {
   const prediction = await requestReplicate<string | string[] | null>("openai/gpt-5", {
     prompt,
@@ -76,48 +146,13 @@ export async function generateImageName(prompt: string): Promise<string> {
     reasoning_effort: "minimal"
   });
 
-  const output = prediction.output;
-  let rawText: string | null = null;
-
-  const serializeToken = (token: unknown): string => {
-    if (typeof token === "string") {
-      return token;
-    }
-    if (token && typeof token === "object") {
-      if ("text" in token && typeof (token as { text?: unknown }).text === "string") {
-        return (token as { text: string }).text;
-      }
-      if ("token" in token && typeof (token as { token?: unknown }).token === "string") {
-        return (token as { token: string }).token;
-      }
-      return `${token}`;
-    }
-    if (token === null || token === undefined) {
-      return "";
-    }
-    return String(token);
-  };
-
-  if (typeof output === "string") {
-    rawText = output;
-  } else if (Array.isArray(output)) {
-    rawText = output.map(serializeToken).join("");
-  } else if (output && typeof output === "object" && "text" in output) {
-    rawText = String((output as { text: unknown }).text);
-  }
+  const rawText = extractRawText(prediction.output);
 
   if (!rawText) {
     throw new Error("Boş görsel adı üretildi");
   }
 
-  const sanitized = rawText
-    .normalize("NFC")
-    .replace(/\p{Cf}/gu, "")
-    .replace(/[\r\n\t]/g, " ")
-    .replace(/["'`]/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .normalize("NFC");
+  const sanitized = sanitizeGeneratedText(rawText).replace(/["'`]/g, "");
 
   if (sanitized.length === 0) {
     throw new Error("Geçerli görsel adı elde edilemedi");
@@ -125,6 +160,61 @@ export async function generateImageName(prompt: string): Promise<string> {
 
   return sanitized;
 }
+
+
+
+type ColoringPageDescriptionInput = {
+  slug: string;
+  title?: string | null;
+};
+
+export async function generateColoringPageDescription({
+  slug,
+  title
+}: ColoringPageDescriptionInput): Promise<string> {
+  const slugKeyword = `${slug} boyama sayfalaı`;
+  const contextTitle = title?.trim().length ? title.trim() : slug;
+  const prompt = [
+    "Sen ileri seviye bir SEO uzmanı ve yaratıcı bir Türkçe metin yazarı (copywriter)’sın.",
+    `Görevin: ${slug} konulu bir boyama sayfası için maksimum 155 karakter uzunluğunda, kullanıcıları tıklamaya teşvik eden bir meta açıklaması oluşturmak.`,
+    `Açıklama cümlesi mutlaka ${slugKeyword} anahtar kelimesiyle başlasın.`,
+    "Cümle doğal, akıcı ve çocuklar veya ebeveynlere hitap eden bir tonla yazılsın.",
+    "Kelimeleri tekrar etme, emoji veya alakasız ifadeler kullanma.",
+    `İçerik başlığı: ${contextTitle}.`,
+    "Sadece açıklama cümlesini döndür, başka hiçbir şey yazma."
+  ].join(" ");
+
+  const prediction = await requestReplicate<string | string[] | null>("openai/gpt-5", {
+    prompt,
+    messages: [],
+    verbosity: "medium",
+    image_input: [],
+    reasoning_effort: "minimal"
+  });
+
+  const rawText = extractRawText(prediction.output);
+
+  if (!rawText) {
+    throw new Error("Boş meta açıklaması üretildi");
+  }
+
+  let sanitized = sanitizeGeneratedText(rawText);
+
+  if (sanitized.length === 0) {
+    throw new Error("Geçerli meta açıklaması elde edilemedi");
+  }
+
+  sanitized = ensureStartsWithSlugKeyword(sanitized, slugKeyword);
+  sanitized = sanitizeGeneratedText(sanitized);
+  sanitized = enforceMaxLength(sanitized, 155);
+
+  if (sanitized.length === 0) {
+    throw new Error("Meta açıklaması sınırlandırılırken içerik kayboldu");
+  }
+
+  return sanitized;
+}
+
 
 export async function generateImageBuffer(prompt: string): Promise<{ buffer: Buffer; mimeType: string }>
 {
