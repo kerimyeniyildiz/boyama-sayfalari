@@ -151,7 +151,7 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
     ? seoSections.slice(cardGroups.length)
     : [];
   const shouldRenderExtraContent =
-    filteredExtraEntries.length > 0 || (hasSeoContent && seoSections.length > 0);
+    filteredExtraEntries.length > 0 || (hasSeoContent && (seoSections.length > 0 || seoIntroHtml.length > 0));
 
   return (
     <section className="container py-12">
@@ -175,12 +175,6 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
             </h1>
             <div className="space-y-3 text-brand-dark/70">
               <p>{page.description}</p>
-              {hasSeoContent && seoIntroHtml.length > 0 ? (
-                <div
-                  className={seoIntroClassName}
-                  dangerouslySetInnerHTML={{ __html: seoIntroHtml }}
-                />
-              ) : null}
               <div className="space-y-3 bg-white/70 text-sm leading-relaxed">
                 <p>
                   Hayal gücünü serbest bırak! Ücretsiz, yüksek çözünürlüklü boyama
@@ -255,6 +249,12 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
 
       {shouldRenderExtraContent ? (
         <div className="mt-16 space-y-8">
+          {hasSeoContent && seoIntroHtml.length > 0 ? (
+            <div
+              className={seoIntroClassName}
+              dangerouslySetInnerHTML={{ __html: seoIntroHtml }}
+            />
+          ) : null}
           {filteredExtraEntries.length > 0 ? (
             <p className="text-2xl font-semibold text-brand-dark">
               Boyama sayfalarını keşfet:
