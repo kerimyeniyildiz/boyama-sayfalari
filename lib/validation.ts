@@ -12,7 +12,7 @@ export const pageMetadataSchema = z.object({
     .trim()
     .min(20, "Açıklama en az 20 karakter olmalıdır.")
     .max(155, "Açıklama en fazla 155 karakter olmalıdır."),
-  seoContent: z.string().max(10000).optional()
+  seoContent: z.string().max(120000, "SEO metni en fazla yaklaşık 1000 kelime (120.000 karakter) olabilir.").optional()
 });
 
 export const loginSchema = z.object({
