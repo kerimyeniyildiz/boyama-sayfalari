@@ -77,8 +77,57 @@ function buildExtraEntries(page: ColoringPageDetail): PageEntry[] {
   return page.children.map((child) => toPageEntry(child, page.slug));
 }
 
+const CARDS_PER_SEO_SECTION = 3;
+
+type SplitSeoContentResult = {
+  intro: string;
+  sections: string[];
+};
+
+function splitSeoContentByH2(markup: string): SplitSeoContentResult {
+  if (!markup) {
+    return { intro: "", sections: [] };
+  }
+
+  const headings: Array<{ start: number; end: number }> = [];
+  const headingRegex = /<h2\b[^>]*>.*?<\/h2>/gis;
+  let match: RegExpExecArray | null;
+
+  while ((match = headingRegex.exec(markup)) !== null) {
+    headings.push({ start: match.index, end: headingRegex.lastIndex });
+  }
+
+  if (headings.length === 0) {
+    return { intro: markup, sections: [] };
+  }
+
+  const intro = markup.slice(0, headings[0].start).trim();
+  const sections = headings.map((heading, index) => {
+    const nextStart = headings[index + 1]?.start ?? markup.length;
+    return markup.slice(heading.start, nextStart).trim();
+  });
+
+  return { intro, sections };
+}
+
+function chunkArray<T>(items: T[], size: number): T[][] {
+  if (size <= 0) {
+    return [items];
+  }
+
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+
+  return chunks;
+}
+
 const seoContentClassName =
   "space-y-3 text-brand-dark/75 [&_h1]:text-3xl [&_h1]:font-semibold [&_h1]:text-brand-dark [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:text-brand-dark [&_p]:leading-relaxed [&_strong]:font-semibold [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5";
+
+const seoIntroClassName =
+  "space-y-3 text-brand-dark/70 [&_p]:leading-relaxed [&_strong]:font-semibold [&_em]:italic";
 
 export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
   const primaryEntry = toPageEntry(page);
@@ -89,6 +138,20 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
   const isMainPage = !isChild;
   const seoContentMarkup = page.seoContent?.trim() ?? "";
   const hasSeoContent = isMainPage && seoContentMarkup.length > 0;
+  const { intro: seoIntroHtml, sections: seoSections } = hasSeoContent
+    ? splitSeoContentByH2(seoContentMarkup)
+    : { intro: "", sections: [] };
+
+  const filteredExtraEntries = isChild
+    ? extraEntries.filter((entry) => entry.id !== page.id)
+    : extraEntries;
+
+  const cardGroups = chunkArray(filteredExtraEntries, CARDS_PER_SEO_SECTION);
+  const remainingSeoSections = hasSeoContent
+    ? seoSections.slice(cardGroups.length)
+    : [];
+  const shouldRenderExtraContent =
+    filteredExtraEntries.length > 0 || (hasSeoContent && seoSections.length > 0);
 
   return (
     <section className="container py-12">
@@ -112,26 +175,32 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
             </h1>
             <div className="space-y-3 text-brand-dark/70">
               <p>{page.description}</p>
+              {hasSeoContent && seoIntroHtml.length > 0 ? (
+                <div
+                  className={seoIntroClassName}
+                  dangerouslySetInnerHTML={{ __html: seoIntroHtml }}
+                />
+              ) : null}
               <div className="space-y-3 bg-white/70 text-sm leading-relaxed">
                 <p>
                   Hayal gücünü serbest bırak! Ücretsiz, yüksek çözünürlüklü boyama
                   sayfalarımızı indir, yazdır ve dilediğin renklerle canlandır.
                 </p>
                 <div className="space-y-1">
-                  <p className="font-semibold text-brand-dark">⬇️ Nasıl İndirilir?</p>
+                  <p className="font-semibold text-brand-dark">Nasıl indirilir?</p>
                   <div className="space-y-1">
-                    <p>PDF indir düğmesine tıkla. 🖱️</p>
-                    <p>Açılan dosyada İndir / Kaydet seçeneğini seç. 💾</p>
-                    <p>A4 yazdır 🖨️ veya tablette/telefonda dijital boya 📱.</p>
+                    <p>PDF indir düğmesine tıkla.</p>
+                    <p>Açılan dosyada indir / kaydet seçeneğini işaretle.</p>
+                    <p>A4 yazdır veya tablette dijital olarak boya.</p>
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <p className="font-semibold text-brand-dark">💡 İpucu</p>
+                  <p className="font-semibold text-brand-dark">İpucu</p>
                   <div className="space-y-1">
                     <p>
-                      Kalın alanlar için keçeli 🖊️, detaylar için ince uçlu kalem kullan.
+                      Büyük alanlar için keçeli kalem, detaylar için ince uçlu kalem kullan.
                     </p>
-                    <p>Bitirdiğinde adını ve tarihi eklemeyi unutma. 📝</p>
+                    <p>Bitirdiğinde adını ve tarihi eklemeyi unutma.</p>
                   </div>
                 </div>
               </div>
@@ -140,8 +209,7 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
               <div className="flex gap-2">
                 <dt className="min-w-[120px] font-medium text-brand-dark">Boyut</dt>
                 <dd>
-                  {primaryEntry.width ?? "?"}×{primaryEntry.height ?? "?"} px ·{" "}
-                  {Math.round((page.fileSizeBytes ?? 0) / 1024)} KB
+                  {primaryEntry.width ?? "?"} × {primaryEntry.height ?? "?"} px · {Math.round((page.fileSizeBytes ?? 0) / 1024)} KB
                 </dd>
               </div>
               <div className="flex gap-2">
@@ -176,10 +244,7 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
           </div>
           <div className="flex flex-col gap-3">
             <Button asChild size="lg" className="w-full">
-              <Link
-                href={pdfRoute}
-                className="flex items-center justify-center gap-2"
-              >
+              <Link href={pdfRoute} className="flex items-center justify-center gap-2">
                 <FileDown className="h-5 w-5" />
                 PDF indir
               </Link>
@@ -188,41 +253,64 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
         </div>
       </div>
 
-      {extraEntries.length > 0 ? (
-        <div className="mt-16 space-y-6">
-          {hasSeoContent ? (
-            <div
-              className={seoContentClassName}
-              dangerouslySetInnerHTML={{ __html: seoContentMarkup }}
-            />
+      {shouldRenderExtraContent ? (
+        <div className="mt-16 space-y-8">
+          {filteredExtraEntries.length > 0 ? (
+            <p className="text-2xl font-semibold text-brand-dark">
+              Boyama sayfalarını keşfet:
+            </p>
           ) : null}
-          <p className="text-2xl font-semibold text-brand-dark">
-            Boyama sayfalarını keşfet:
-          </p>
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {extraEntries.map((entry) => {
-              if (isChild && entry.id === page.id) {
+          <div className="space-y-10">
+            {cardGroups.map((group, groupIndex) => {
+              const sectionHtml = hasSeoContent ? seoSections[groupIndex] : undefined;
+
+              if (group.length === 0 && !sectionHtml) {
                 return null;
               }
 
-              const {
-                large: entryImage,
-                blur: entryBlur,
-                optimized: entryOptimized
-              } = resolveImageKeys(entry);
-
               return (
-                <ColoringPageCard
-                  key={entry.id}
-                  id={entry.id}
-                  slug={entry.slug}
-                  title={entry.title}
-                  imageSrc={entryImage}
-                  imageBlur={entryBlur}
-                  optimized={entryOptimized}
-                />
+                <div key={`card-group-${groupIndex}`} className="space-y-6">
+                  {group.length > 0 ? (
+                    <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                      {group.map((entry) => {
+                        const {
+                          large: entryImage,
+                          blur: entryBlur,
+                          optimized: entryOptimized
+                        } = resolveImageKeys(entry);
+
+                        return (
+                          <ColoringPageCard
+                            key={entry.id}
+                            id={entry.id}
+                            slug={entry.slug}
+                            title={entry.title}
+                            imageSrc={entryImage}
+                            imageBlur={entryBlur}
+                            optimized={entryOptimized}
+                          />
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                  {sectionHtml ? (
+                    <div
+                      className={seoContentClassName}
+                      dangerouslySetInnerHTML={{ __html: sectionHtml }}
+                    />
+                  ) : null}
+                </div>
               );
             })}
+            {hasSeoContent
+              ? remainingSeoSections.map((sectionHtml, index) => (
+                  <div
+                    key={`seo-section-tail-${index}`}
+                    className={seoContentClassName}
+                    dangerouslySetInnerHTML={{ __html: sectionHtml }}
+                  />
+                ))
+              : null}
           </div>
         </div>
       ) : null}
