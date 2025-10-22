@@ -1,73 +1,31 @@
-import type { MetadataRoute } from "next";
+import { getBaseUrl, getLatestContentUpdate } from "@/lib/sitemap-utils";
 
-import { prisma } from "@/lib/db";
-import { siteConfig } from "@/lib/seo";
-import { buildColoringPagePath } from "@/lib/page-paths";
+export const revalidate = 86400;
 
-export const revalidate = 60;
+type SitemapIndexEntry = {
+  url: string;
+  lastModified: Date;
+};
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = siteConfig.url.replace(/\/$/, "");
-
-  const entries: MetadataRoute.Sitemap = [
+export default async function sitemap(): Promise<SitemapIndexEntry[]> {
+  const baseUrl = getBaseUrl();
+  const lastModified = await getLatestContentUpdate();
+  return [
     {
-      url: `${baseUrl}/`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 1
+      url: `${baseUrl}/sitemaps/core.xml`,
+      lastModified
     },
     {
-      url: `${baseUrl}/ara`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.8
+      url: `${baseUrl}/sitemaps/pages.xml`,
+      lastModified
+    },
+    {
+      url: `${baseUrl}/sitemaps/categories.xml`,
+      lastModified
+    },
+    {
+      url: `${baseUrl}/sitemaps/tags.xml`,
+      lastModified
     }
   ];
-
-  try {
-    const [pages, categories, tags] = await Promise.all([
-      prisma.coloringPage.findMany({
-        where: { status: "PUBLISHED", parentId: null },
-        select: {
-          slug: true,
-          updatedAt: true,
-          parent: { select: { slug: true } }
-        }
-      }),
-      prisma.category.findMany({ select: { slug: true, updatedAt: true } }),
-      prisma.tag.findMany({ select: { slug: true, updatedAt: true } })
-    ]);
-
-    for (const page of pages) {
-      const path = buildColoringPagePath(page);
-      entries.push({
-        url: `${baseUrl}${path}`,
-        lastModified: page.updatedAt,
-        changeFrequency: "weekly",
-        priority: 0.9
-      });
-    }
-
-    for (const category of categories) {
-      entries.push({
-        url: `${baseUrl}/kategori/${category.slug}`,
-        lastModified: category.updatedAt,
-        changeFrequency: "weekly",
-        priority: 0.7
-      });
-    }
-
-    for (const tag of tags) {
-      entries.push({
-        url: `${baseUrl}/etiket/${tag.slug}`,
-        lastModified: tag.updatedAt,
-        changeFrequency: "weekly",
-        priority: 0.6
-      });
-    }
-  } catch (error) {
-    console.error("Veritabanı hatası nedeniyle sitemap oluşturma atlandı", error);
-  }
-
-  return entries;
 }

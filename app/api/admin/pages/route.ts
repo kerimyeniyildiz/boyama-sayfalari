@@ -630,6 +630,10 @@ export async function POST(request: Request) {
     revalidatePath("/");
     revalidatePath("/ara");
     revalidatePath("/sitemap.xml");
+    revalidatePath("/sitemaps/core.xml");
+    revalidatePath("/sitemaps/pages.xml");
+    revalidatePath("/sitemaps/categories.xml");
+    revalidatePath("/sitemaps/tags.xml");
     revalidatePath("/admin/pages");
     createdPages.forEach((entry) => {
       revalidatePath(buildColoringPagePath(entry));

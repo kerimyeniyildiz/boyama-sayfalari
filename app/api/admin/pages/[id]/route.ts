@@ -312,6 +312,10 @@ export async function PUT(
     revalidatePath("/");
     revalidatePath("/ara");
     revalidatePath("/sitemap.xml");
+    revalidatePath("/sitemaps/core.xml");
+    revalidatePath("/sitemaps/pages.xml");
+    revalidatePath("/sitemaps/categories.xml");
+    revalidatePath("/sitemaps/tags.xml");
     revalidatePath(buildColoringPagePath(updatedPage));
     if (slugChanged) {
       revalidatePath(buildColoringPagePath(existingPage));
@@ -430,6 +434,10 @@ export async function DELETE(
   revalidatePath("/");
   revalidatePath("/ara");
   revalidatePath("/sitemap.xml");
+  revalidatePath("/sitemaps/core.xml");
+  revalidatePath("/sitemaps/pages.xml");
+  revalidatePath("/sitemaps/categories.xml");
+  revalidatePath("/sitemaps/tags.xml");
   revalidatePath("/admin/pages");
   revalidatePath(`/admin/pages/${params.id}/edit`);
   if (page.parent?.id) {
