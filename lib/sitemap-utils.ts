@@ -6,22 +6,27 @@ export function getBaseUrl(): string {
 }
 
 export async function getLatestContentUpdate(): Promise<Date> {
-  const [pageAgg, categoryAgg, tagAgg] = await Promise.all([
-    prisma.coloringPage.aggregate({
-      _max: { updatedAt: true }
-    }),
-    prisma.category.aggregate({
-      _max: { updatedAt: true }
-    }),
-    prisma.tag.aggregate({
-      _max: { updatedAt: true }
-    })
-  ]);
+  try {
+    const [pageAgg, categoryAgg, tagAgg] = await Promise.all([
+      prisma.coloringPage.aggregate({
+        _max: { updatedAt: true }
+      }),
+      prisma.category.aggregate({
+        _max: { updatedAt: true }
+      }),
+      prisma.tag.aggregate({
+        _max: { updatedAt: true }
+      })
+    ]);
 
-  return (
-    pageAgg._max.updatedAt ??
-    categoryAgg._max.updatedAt ??
-    tagAgg._max.updatedAt ??
-    new Date()
-  );
+    return (
+      pageAgg._max.updatedAt ??
+      categoryAgg._max.updatedAt ??
+      tagAgg._max.updatedAt ??
+      new Date()
+    );
+  } catch (error) {
+    console.error("Sitemap: içerik güncelleme tarihi alınamadı", error);
+    return new Date();
+  }
 }
