@@ -184,6 +184,8 @@ export async function PUT(
 
   const title = toString(formData.get("title")) || existingPage.title;
   const rawSlug = toString(formData.get("slug")) || existingPage.slug;
+  const descriptionRaw =
+    toString(formData.get("description")) || existingPage.description || "";
   const submittedCategories = collectStrings(formData.getAll("categories"));
   const submittedTags = collectStrings(formData.getAll("tags"));
   const seoContentRaw = toRichText(formData.get("seoContent"));
@@ -199,6 +201,7 @@ export async function PUT(
       submittedTags.length > 0
         ? submittedTags
         : existingPage.tags.map((item) => item.tag.slug),
+    description: descriptionRaw,
     seoContent: seoContentRaw
   };
 
@@ -272,7 +275,7 @@ export async function PUT(
       data: {
         slug: metadata.slug,
         title: metadata.title,
-        description: `${metadata.title} boyama sayfası.`,
+        description: metadata.description,
         seoContent: normalizedSeoContent,
         pdfKey: assetInfo?.pdfKey ?? existingPage.pdfKey,
         coverImageKey: assetInfo?.coverKey ?? existingPage.coverImageKey,

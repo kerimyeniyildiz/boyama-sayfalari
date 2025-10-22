@@ -7,6 +7,11 @@ export const pageMetadataSchema = z.object({
   slug: z.string().min(3),
   categories: z.array(z.string().min(1)).default([]),
   tags: z.array(z.string().min(1)).default([]),
+  description: z
+    .string()
+    .trim()
+    .min(20, "Açıklama en az 20 karakter olmalıdır.")
+    .max(155, "Açıklama en fazla 155 karakter olmalıdır."),
   seoContent: z.string().max(10000).optional()
 });
 

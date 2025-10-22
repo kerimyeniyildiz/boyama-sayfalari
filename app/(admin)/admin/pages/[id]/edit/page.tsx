@@ -32,6 +32,7 @@ export default async function EditPage({ params }: PageProps) {
     id: page.id,
     title: page.title,
     slug: page.slug,
+    description: page.description,
     categories: page.categories,
     tags: page.tags,
     seoContent: page.seoContent

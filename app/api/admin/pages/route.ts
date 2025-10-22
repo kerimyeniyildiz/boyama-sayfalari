@@ -464,6 +464,7 @@ export async function POST(request: Request) {
 
   const title = toString(formData.get("title"));
   const rawSlug = toString(formData.get("slug"));
+  const descriptionRaw = toString(formData.get("description"));
   const submittedCategories = collectStrings(formData.getAll("categories"));
   const submittedTags = collectStrings(formData.getAll("tags"));
   const seoContentRaw = toRichText(formData.get("seoContent"));
@@ -513,6 +514,7 @@ export async function POST(request: Request) {
   const metadataInput = {
     title: effectiveTitle,
     slug: effectiveSlug,
+    description: descriptionRaw,
     categories: submittedCategories,
     tags: submittedTags,
     seoContent: seoContentRaw
@@ -558,7 +560,7 @@ export async function POST(request: Request) {
       data: {
         slug: parentSlug,
         title: metadata.title,
-        description: `${metadata.title} boyama sayfası.`,
+        description: metadata.description,
         seoContent: normalizedSeoContent,
         orientation: "PORTRAIT",
         status: PageStatus.PUBLISHED,

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { SimpleRichTextEditor } from "@/components/admin/simple-rich-text-editor";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 type PageFormValues = z.infer<typeof pageMetadataSchema>;
 
@@ -34,6 +35,7 @@ type PagePayload = {
   id: string;
   title: string;
   slug: string;
+  description: string;
   categories: Array<{ category: { slug: string } }>;
   tags: Array<{ tag: { slug: string } }>;
   seoContent: string | null;
@@ -57,6 +59,7 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
   const defaultValues: PageFormValues = {
     title: page?.title ?? "",
     slug: page?.slug ?? "",
+    description: page?.description ?? "",
     categories: page?.categories.map((item) => item.category.slug) ?? [],
     tags: page?.tags.map((item) => item.tag.slug) ?? [],
     seoContent: page?.seoContent ?? ""
@@ -68,6 +71,7 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
   });
 
   const titleValue = form.watch("title");
+  const descriptionValue = form.watch("description") ?? "";
 
   useEffect(() => {
     if (!slugEdited && titleValue) {
@@ -82,6 +86,7 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
 
     formData.append("title", values.title);
     formData.append("slug", values.slug);
+    formData.append("description", values.description.trim());
     formData.append("seoContent", values.seoContent ?? "");
     values.categories.forEach((slug) => formData.append("categories", slug));
     values.tags.forEach((slug) => formData.append("tags", slug));
@@ -191,6 +196,24 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
           />
           {errors.slug?.message ? (
             <p className="text-xs text-red-500">{errors.slug.message}</p>
+          ) : null}
+        </div>
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="description">Meta açıklaması</Label>
+          <Textarea
+            id="description"
+            rows={3}
+            maxLength={155}
+            {...form.register("description")}
+            disabled={isPending}
+            placeholder="Elsa boyama sayfaları: Çocuklar için eğlenceli, kolay ve indirilebilir çizimler; prenses hayranları hemen renklendirsin!"
+          />
+          <div className="flex items-center justify-between text-xs text-brand-dark/60">
+            <p>Arama sonuçlarında görünecek açıklamayı 155 karakteri aşmadan yazın.</p>
+            <span>{descriptionValue.length}/155</span>
+          </div>
+          {errors.description?.message ? (
+            <p className="text-xs text-red-500">{errors.description.message}</p>
           ) : null}
         </div>
       </div>
