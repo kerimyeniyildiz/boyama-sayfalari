@@ -629,6 +629,7 @@ export async function POST(request: Request) {
 
     revalidatePath("/");
     revalidatePath("/ara");
+    revalidatePath("/sitemap.xml");
     revalidatePath("/admin/pages");
     createdPages.forEach((entry) => {
       revalidatePath(buildColoringPagePath(entry));

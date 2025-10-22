@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { siteConfig } from "@/lib/seo";
 import { buildColoringPagePath } from "@/lib/page-paths";
 
+export const revalidate = 60;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = siteConfig.url.replace(/\/$/, "");
 

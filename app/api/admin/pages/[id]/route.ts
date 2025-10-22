@@ -311,6 +311,7 @@ export async function PUT(
 
     revalidatePath("/");
     revalidatePath("/ara");
+    revalidatePath("/sitemap.xml");
     revalidatePath(buildColoringPagePath(updatedPage));
     if (slugChanged) {
       revalidatePath(buildColoringPagePath(existingPage));
@@ -428,6 +429,7 @@ export async function DELETE(
 
   revalidatePath("/");
   revalidatePath("/ara");
+  revalidatePath("/sitemap.xml");
   revalidatePath("/admin/pages");
   revalidatePath(`/admin/pages/${params.id}/edit`);
   if (page.parent?.id) {
