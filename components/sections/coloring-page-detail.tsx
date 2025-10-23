@@ -8,6 +8,7 @@ import type { ColoringPageDetail } from "@/lib/data/coloring-pages";
 import { FALLBACK_BLUR_DATA_URL } from "@/lib/placeholders";
 import { buildColoringPagePath } from "@/lib/page-paths";
 import { getPublicUrl } from "@/lib/r2";
+import { sanitizeSeoContent } from "@/lib/html";
 import { ColoringPageCard } from "./coloring-page-detail-client";
 
 type PageEntry = {
@@ -50,17 +51,19 @@ function resolveImageKeys(entry: PageEntry) {
     const blur = entry.thumbWebpKey.includes("-800.")
       ? getPublicUrl(entry.thumbWebpKey.replace("-800.", "-400."))
       : FALLBACK_BLUR_DATA_URL;
-    return { large, blur, optimized: true } as const;
+    const lightbox = entry.coverImageKey ? getPublicUrl(entry.coverImageKey) : large;
+    return { large, blur, lightbox, optimized: true } as const;
   }
 
   if (entry.coverImageKey) {
     const url = getPublicUrl(entry.coverImageKey);
-    return { large: url, blur: url, optimized: true } as const;
+    return { large: url, blur: url, lightbox: url, optimized: true } as const;
   }
 
   return {
     large: FALLBACK_BLUR_DATA_URL,
     blur: FALLBACK_BLUR_DATA_URL,
+    lightbox: FALLBACK_BLUR_DATA_URL,
     optimized: false
   } as const;
 }
@@ -136,7 +139,8 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
   const extraEntries = buildExtraEntries(page);
   const isChild = Boolean(page.parent);
   const isMainPage = !isChild;
-  const seoContentMarkup = page.seoContent?.trim() ?? "";
+  const seoContentMarkupRaw = page.seoContent?.trim() ?? "";
+  const seoContentMarkup = sanitizeSeoContent(seoContentMarkupRaw);
   const hasSeoContent = isMainPage && seoContentMarkup.length > 0;
   const { intro: seoIntroHtml, sections: seoSections } = hasSeoContent
     ? splitSeoContentByH2(seoContentMarkup)
@@ -276,6 +280,7 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
                         const {
                           large: entryImage,
                           blur: entryBlur,
+                          lightbox: entryLightbox,
                           optimized: entryOptimized
                         } = resolveImageKeys(entry);
 
@@ -287,6 +292,7 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
                             title={entry.title}
                             imageSrc={entryImage}
                             imageBlur={entryBlur}
+                            lightboxSrc={entryLightbox}
                             optimized={entryOptimized}
                           />
                         );

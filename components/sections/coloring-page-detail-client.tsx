@@ -14,10 +14,19 @@ type ColoringPageCardProps = {
   title: string;
   imageSrc: string;
   imageBlur: string;
+  lightboxSrc: string;
   optimized: boolean;
 };
 
-export function ColoringPageCard({ id, slug, title, imageSrc, imageBlur, optimized }: ColoringPageCardProps) {
+export function ColoringPageCard({
+  id,
+  slug,
+  title,
+  imageSrc,
+  imageBlur,
+  lightboxSrc,
+  optimized
+}: ColoringPageCardProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const openLightbox = () => {
@@ -77,17 +86,19 @@ export function ColoringPageCard({ id, slug, title, imageSrc, imageBlur, optimiz
             <X className="h-6 w-6" />
           </button>
           <div
-            className="flex max-h-[90vh] max-w-4xl flex-col gap-4"
+            className="flex w-full max-w-[min(90vw,60rem)] flex-col gap-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-white">
+            <div className="relative mx-auto aspect-[3/4] w-full max-h-[85vh] overflow-hidden rounded-lg bg-white">
               <Image
-                src={imageSrc}
+                src={lightboxSrc}
                 alt={title}
                 fill
-                sizes="(max-width: 1024px) 100vw, 80vw"
+                sizes="(max-width: 768px) 100vw, 70vw"
                 className="object-contain"
-                unoptimized
+                placeholder="blur"
+                blurDataURL={imageBlur}
+                unoptimized={!optimized}
               />
             </div>
             <Button asChild size="lg" className="w-full">
