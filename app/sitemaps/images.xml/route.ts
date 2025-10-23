@@ -24,38 +24,38 @@ export async function GET(): Promise<Response> {
       orderBy: { updatedAt: "desc" }
     });
 
-    const entries: SitemapEntry[] = pages
-      .map((page) => {
-        const path = buildColoringPagePath(page);
-        const images: NonNullable<SitemapEntry["images"]> = [];
+    const entries: SitemapEntry[] = [];
 
-        if (page.thumbWebpKey) {
-          images.push({
-            url: getPublicUrl(page.thumbWebpKey),
-            title: page.title
-          });
-        }
+    pages.forEach((page) => {
+      const path = buildColoringPagePath(page);
+      const images: NonNullable<SitemapEntry["images"]> = [];
 
-        if (page.coverImageKey && page.coverImageKey !== page.thumbWebpKey) {
-          images.push({
-            url: getPublicUrl(page.coverImageKey),
-            title: page.title
-          });
-        }
+      if (page.thumbWebpKey) {
+        images.push({
+          url: getPublicUrl(page.thumbWebpKey),
+          title: page.title
+        });
+      }
 
-        if (images.length === 0) {
-          return undefined;
-        }
+      if (page.coverImageKey && page.coverImageKey !== page.thumbWebpKey) {
+        images.push({
+          url: getPublicUrl(page.coverImageKey),
+          title: page.title
+        });
+      }
 
-        return {
-          url: `${baseUrl}${path}`,
-          lastModified: page.updatedAt,
-          changeFrequency: "weekly",
-          priority: page.parentId ? 0.5 : 0.8,
-          images
-        };
-      })
-      .filter((entry): entry is SitemapEntry => Boolean(entry));
+      if (images.length === 0) {
+        return;
+      }
+
+      entries.push({
+        url: `${baseUrl}${path}`,
+        lastModified: page.updatedAt,
+        changeFrequency: "weekly",
+        priority: page.parentId ? 0.5 : 0.8,
+        images
+      });
+    });
 
     return buildSitemapResponse(entries);
   } catch (error) {
