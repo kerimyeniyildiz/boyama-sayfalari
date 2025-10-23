@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/db";
+import { sanitizeSeoContent } from "@/lib/html";
 import { pageMetadataSchema } from "@/lib/validation";
 import { slugify } from "@/lib/slug";
 import { generateImageAssets, generatePdfFromImage, getBufferSize } from "@/lib/images";
@@ -216,10 +217,8 @@ export async function PUT(
   }
 
   const metadata = parsed.data;
-  const normalizedSeoContent =
-    typeof metadata.seoContent === "string" && metadata.seoContent.trim().length > 0
-      ? metadata.seoContent.trim()
-      : null;
+  const sanitizedSeoContent = sanitizeSeoContent(metadata.seoContent);
+  const normalizedSeoContent = sanitizedSeoContent.length > 0 ? sanitizedSeoContent : null;
   const slugChanged = metadata.slug !== existingPage.slug;
 
   if (slugChanged) {
