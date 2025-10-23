@@ -1,18 +1,14 @@
-import type { MetadataRoute } from "next";
-
 import { prisma } from "@/lib/db";
 import { buildColoringPagePath } from "@/lib/page-paths";
 import { getPublicUrl } from "@/lib/r2";
+import { buildSitemapResponse, type SitemapEntry } from "@/lib/sitemap-response";
 import { getBaseUrl } from "@/lib/sitemap-utils";
 
 export const revalidate = 86400;
 
-type ExtendedSitemapEntry = MetadataRoute.Sitemap[number] & {
-  images?: Array<{ url: string; title?: string }>;
-};
-
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+export async function GET(): Promise<Response> {
   const baseUrl = getBaseUrl();
+
   try {
     const pages = await prisma.coloringPage.findMany({
       where: { status: "PUBLISHED", parentId: null },
@@ -27,9 +23,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       orderBy: { updatedAt: "desc" }
     });
 
-    const entries: ExtendedSitemapEntry[] = pages.map((page) => {
+    const entries: SitemapEntry[] = pages.map((page) => {
       const path = buildColoringPagePath(page);
-      const images: NonNullable<ExtendedSitemapEntry["images"]> = [];
+      const images: NonNullable<SitemapEntry["images"]> = [];
 
       if (page.thumbWebpKey) {
         images.push({
@@ -52,9 +48,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       };
     });
 
-    return entries;
+    return buildSitemapResponse(entries);
   } catch (error) {
     console.error("Sitemap: sayfalar listelenemedi", error);
-    return [];
+    return buildSitemapResponse([]);
   }
 }

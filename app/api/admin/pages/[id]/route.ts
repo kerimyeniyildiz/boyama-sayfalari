@@ -313,6 +313,7 @@ export async function PUT(
     revalidatePath("/sitemap.xml");
     revalidatePath("/sitemaps/core.xml");
     revalidatePath("/sitemaps/pages.xml");
+    revalidatePath("/sitemaps/images.xml");
     revalidatePath("/sitemaps/categories.xml");
     revalidatePath("/sitemaps/tags.xml");
     revalidatePath(buildColoringPagePath(updatedPage));
@@ -435,6 +436,7 @@ export async function DELETE(
   revalidatePath("/sitemap.xml");
   revalidatePath("/sitemaps/core.xml");
   revalidatePath("/sitemaps/pages.xml");
+  revalidatePath("/sitemaps/images.xml");
   revalidatePath("/sitemaps/categories.xml");
   revalidatePath("/sitemaps/tags.xml");
   revalidatePath("/admin/pages");

@@ -631,6 +631,7 @@ export async function POST(request: Request) {
     revalidatePath("/sitemap.xml");
     revalidatePath("/sitemaps/core.xml");
     revalidatePath("/sitemaps/pages.xml");
+    revalidatePath("/sitemaps/images.xml");
     revalidatePath("/sitemaps/categories.xml");
     revalidatePath("/sitemaps/tags.xml");
     revalidatePath("/admin/pages");

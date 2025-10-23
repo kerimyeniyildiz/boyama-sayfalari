@@ -1,14 +1,13 @@
-import type { MetadataRoute } from "next";
-
+import { buildSitemapResponse, type SitemapEntry } from "@/lib/sitemap-response";
 import { getBaseUrl, getLatestContentUpdate } from "@/lib/sitemap-utils";
 
 export const revalidate = 86400;
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+export async function GET(): Promise<Response> {
   const baseUrl = getBaseUrl();
   const lastModified = await getLatestContentUpdate();
 
-  return [
+  const entries: SitemapEntry[] = [
     {
       url: `${baseUrl}/`,
       lastModified,
@@ -22,4 +21,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8
     }
   ];
+
+  return buildSitemapResponse(entries);
 }

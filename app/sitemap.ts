@@ -20,6 +20,10 @@ export default async function sitemap(): Promise<SitemapIndexEntry[]> {
       lastModified
     },
     {
+      url: `${baseUrl}/sitemaps/images.xml`,
+      lastModified
+    },
+    {
       url: `${baseUrl}/sitemaps/categories.xml`,
       lastModified
     },
