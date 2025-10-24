@@ -19,6 +19,24 @@ export async function GET(): Promise<Response> {
       lastModified,
       changeFrequency: "weekly",
       priority: 0.8
+    },
+    {
+      url: `${baseUrl}/gizlilik-politikasi`,
+      lastModified,
+      changeFrequency: "yearly",
+      priority: 0.6
+    },
+    {
+      url: `${baseUrl}/kullanim-sartlari`,
+      lastModified,
+      changeFrequency: "yearly",
+      priority: 0.6
+    },
+    {
+      url: `${baseUrl}/iletisim`,
+      lastModified,
+      changeFrequency: "yearly",
+      priority: 0.5
     }
   ];
 

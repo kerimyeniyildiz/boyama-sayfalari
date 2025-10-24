@@ -21,6 +21,15 @@ export function SiteFooter() {
           <Link href="/kategori/hayvanlar" className="hover:text-brand-dark">
             Kategoriler
           </Link>
+          <Link href="/gizlilik-politikasi" className="hover:text-brand-dark">
+            Gizlilik Politikası
+          </Link>
+          <Link href="/kullanim-sartlari" className="hover:text-brand-dark">
+            Kullanım Şartları
+          </Link>
+          <Link href="/iletisim" className="hover:text-brand-dark">
+            İletişim
+          </Link>
           <Link href="/admin/login" className="hover:text-brand-dark">
             Yönetici
           </Link>

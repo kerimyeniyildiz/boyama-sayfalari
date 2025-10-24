@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 
-import { cn } from "@/lib/utils";
 import { SonnerToaster } from "@/components/providers/sonner-provider";
+import { cn } from "@/lib/utils";
 
 import "./globals.css";
 
@@ -38,9 +38,9 @@ export const metadata: Metadata = {
     "boyama PDF",
     "ücretsiz boyama"
   ],
-  authors: [{ name: "Boyama Sayfaları" }],
-  creator: "Boyama Sayfaları",
-  publisher: "Boyama Sayfaları",
+  authors: [{ name: siteName }],
+  creator: siteName,
+  publisher: siteName,
   alternates: {
     canonical: siteUrl
   },
@@ -63,6 +63,7 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
     apple: "/apple-touch-icon.png"
   }
 };
