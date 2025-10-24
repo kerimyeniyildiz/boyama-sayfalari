@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { buildSitemapResponse, type SitemapEntry } from "@/lib/sitemap-response";
 import { getBaseUrl } from "@/lib/sitemap-utils";
 
+export const dynamic = "force-dynamic";
 export const revalidate = 86400;
 
 export async function GET(): Promise<Response> {
