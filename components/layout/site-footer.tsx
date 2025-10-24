@@ -15,12 +15,6 @@ export function SiteFooter() {
           </p>
         </div>
         <div className="flex flex-wrap gap-4 text-sm text-brand-dark/70">
-          <Link href="/ara" className="hover:text-brand-dark">
-            Arama
-          </Link>
-          <Link href="/kategori/hayvanlar" className="hover:text-brand-dark">
-            Kategoriler
-          </Link>
           <Link href="/gizlilik-politikasi" className="hover:text-brand-dark">
             Gizlilik Politikası
           </Link>
@@ -29,9 +23,6 @@ export function SiteFooter() {
           </Link>
           <Link href="/iletisim" className="hover:text-brand-dark">
             İletişim
-          </Link>
-          <Link href="/admin/login" className="hover:text-brand-dark">
-            Yönetici
           </Link>
         </div>
       </div>

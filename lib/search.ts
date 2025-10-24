@@ -18,7 +18,7 @@ export async function searchColoringPages(filters: SearchFilters) {
   const offset = (page - 1) * pageSize;
 
   const conditions: Prisma.Sql[] = [
-    Prisma.sql`cp."status" = ${PageStatus.PUBLISHED}`
+    Prisma.sql`cp."status" = ${PageStatus.PUBLISHED}::"PageStatus"`
   ];
 
   let rankSql = Prisma.sql`0::float AS rank`;

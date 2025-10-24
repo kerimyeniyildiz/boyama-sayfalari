@@ -16,8 +16,7 @@ type HeaderLink = {
 const links: HeaderLink[] = [
   { href: "/" as Route, label: "Ana Sayfa" },
   { href: "/kategori/hayvanlar" as Route, label: "Kategori" },
-  { href: "/ara" as Route, label: "Ara" },
-  { href: "/iletisim" as Route, label: "İletişim" }
+  { href: "/ara" as Route, label: "Ara" }
 ];
 
 export function SiteHeader() {
