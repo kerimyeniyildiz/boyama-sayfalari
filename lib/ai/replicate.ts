@@ -6,7 +6,10 @@ const REPLICATE_API_BASE = "https://api.replicate.com/v1";
 const DEFAULT_FETCH_TIMEOUT_MS = 60_000;
 const DEFAULT_MAX_RETRIES = 2;
 
-type NodeRequestInit = RequestInit & { dispatcher?: Dispatcher };
+type NodeRequestInit = RequestInit & {
+  dispatcher?: Dispatcher;
+  signal?: AbortSignal | null;
+};
 
 type FetchRetryOptions = {
   init?: NodeRequestInit;
@@ -39,7 +42,7 @@ async function sleep(ms: number) {
   });
 }
 
-function buildAbortController(timeoutMs: number, existingSignal?: AbortSignal) {
+function buildAbortController(timeoutMs: number, existingSignal?: AbortSignal | null) {
   if (existingSignal) {
     return { signal: existingSignal, cancel: () => undefined };
   }
