@@ -1,30 +1,7 @@
 import { Buffer } from "node:buffer";
-import { Agent, type Dispatcher } from "undici";
 import { env } from "@/lib/env";
 
 const REPLICATE_API_BASE = "https://api.replicate.com/v1";
-const DEFAULT_FETCH_TIMEOUT_MS = 60_000;
-const DEFAULT_MAX_RETRIES = 2;
-
-type NodeRequestInit = RequestInit & {
-  dispatcher?: Dispatcher;
-  signal?: AbortSignal | null;
-};
-
-type FetchRetryOptions = {
-  init?: NodeRequestInit;
-  timeoutMs?: number;
-  retries?: number;
-  retryDelayMs?: number;
-  context?: string;
-};
-
-const replicateAgent = new Agent({
-  connectTimeout: 30_000,
-  headersTimeout: 120_000,
-  keepAliveTimeout: 30_000,
-  keepAliveMaxTimeout: 60_000
-});
 
 type ReplicatePrediction<TOutput = unknown> = {
   id: string;
@@ -42,129 +19,19 @@ async function sleep(ms: number) {
   });
 }
 
-function buildAbortController(timeoutMs: number, existingSignal?: AbortSignal | null) {
-  if (existingSignal) {
-    return { signal: existingSignal, cancel: () => undefined };
-  }
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => {
-    if (!controller.signal.aborted) {
-      controller.abort();
-    }
-  }, timeoutMs);
-
-  return {
-    signal: controller.signal,
-    cancel: () => clearTimeout(timeoutId)
-  };
-}
-
-type FetchErrorWithCause = Error & {
-  cause?: {
-    code?: string;
-    errno?: string;
-    message?: string;
-  };
-};
-
-function describeFetchError(error: unknown): string {
-  if (error instanceof DOMException && error.name === "AbortError") {
-    return "İstek zaman aşımına uğradı";
-  }
-
-  if (error instanceof Error) {
-    const fetchError = error as FetchErrorWithCause;
-    const causeCode = fetchError.cause?.code ?? fetchError.cause?.errno;
-    if (causeCode) {
-      switch (causeCode) {
-        case "UND_ERR_CONNECT_TIMEOUT":
-          return "Sunucuya bağlanırken zaman aşımı oldu";
-        case "UND_ERR_HEADERS_TIMEOUT":
-          return "Sunucudan yanıt başlıkları zamanında gelmedi";
-        case "UND_ERR_BODY_TIMEOUT":
-          return "Sunucudan gelen yanıt tamamlanmadan kesildi";
-        case "ECONNRESET":
-          return "Bağlantı sıfırlandı";
-        case "ETIMEDOUT":
-          return "Bağlantı denemesi zaman aşımına uğradı";
-        default:
-          return `${causeCode} hatası (${fetchError.message})`;
-      }
-    }
-    return fetchError.message;
-  }
-
-  return "Bilinmeyen ağ hatası";
-}
-
-async function fetchWithRetry(
-  url: string,
-  {
-    init,
-    timeoutMs = DEFAULT_FETCH_TIMEOUT_MS,
-    retries = DEFAULT_MAX_RETRIES,
-    retryDelayMs = 1_500,
-    context
-  }: FetchRetryOptions = {}
-): Promise<Response> {
-  let lastError: unknown;
-
-  for (let attempt = 0; attempt <= retries; attempt += 1) {
-    const { signal, cancel } = buildAbortController(timeoutMs, init?.signal);
-
-    try {
-      const response = await fetch(url, {
-        ...init,
-        dispatcher: init?.dispatcher ?? replicateAgent,
-        signal
-      });
-      cancel();
-      return response;
-    } catch (error) {
-      cancel();
-      lastError = error;
-
-      const humanMessage = describeFetchError(error);
-      const label = context ?? url;
-      const attemptLabel = `${attempt + 1}/${retries + 1}`;
-
-      console.warn(
-        `[replicate] ${label} isteği başarısız oldu (deneme ${attemptLabel}): ${humanMessage}`
-      );
-
-      if (attempt === retries) {
-        break;
-      }
-
-      await sleep(retryDelayMs * (attempt + 1));
-    }
-  }
-
-  const message = describeFetchError(lastError);
-  const prefix = context ? `${context} başarısız: ` : "";
-  throw new Error(`${prefix}${message}`);
-}
-
 async function requestReplicate<TOutput = unknown>(
   modelPath: string,
   input: Record<string, unknown>
 ): Promise<ReplicatePrediction<TOutput>> {
-  const response = await fetchWithRetry(
-    `${REPLICATE_API_BASE}/models/${modelPath}/predictions`,
-    {
-      context: "Replicate tahmin isteği",
-      init: {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json; charset=utf-8",
-          Accept: "application/json; charset=utf-8",
-          Authorization: `Token ${env.REPLICATE_API_TOKEN}`
-        },
-        body: JSON.stringify({ input })
-      }
-    }
-  );
+  const response = await fetch(`${REPLICATE_API_BASE}/models/${modelPath}/predictions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Accept": "application/json; charset=utf-8",
+      Authorization: `Token ${env.REPLICATE_API_TOKEN}`
+    },
+    body: JSON.stringify({ input })
+  });
 
   if (!response.ok) {
     const errorBody = await response.text();
@@ -175,13 +42,10 @@ async function requestReplicate<TOutput = unknown>(
 
   while (prediction.status === "starting" || prediction.status === "processing") {
     await sleep(2000);
-    const poll = await fetchWithRetry(prediction.urls.get, {
-      context: "Replicate tahmin sorgusu",
-      init: {
-        headers: {
-          Accept: "application/json; charset=utf-8",
-          Authorization: `Token ${env.REPLICATE_API_TOKEN}`
-        }
+    const poll = await fetch(prediction.urls.get, {
+      headers: {
+        "Accept": "application/json; charset=utf-8",
+        Authorization: `Token ${env.REPLICATE_API_TOKEN}`
       }
     });
 
@@ -202,7 +66,6 @@ async function requestReplicate<TOutput = unknown>(
 
   return prediction;
 }
-
 
 function serializeToken(token: unknown): string {
   if (typeof token === "string") {
@@ -292,10 +155,7 @@ export async function generateImageBuffer(prompt: string): Promise<{ buffer: Buf
     throw new Error("Görsel çıktısı alınamadı");
   }
 
-  const imageResponse = await fetchWithRetry(imageUrl, {
-    context: "Replicate görsel indirimi",
-    timeoutMs: 90_000
-  });
+  const imageResponse = await fetch(imageUrl);
   if (!imageResponse.ok) {
     throw new Error(`Görsel indirilemedi (${imageResponse.status})`);
   }
