@@ -7,7 +7,7 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { ColoringPageDetail } from "@/components/sections/coloring-page-detail";
 import { buildColoringPagePath, buildColoringPageUrl } from "@/lib/page-paths";
 
-export const revalidate = 86400;
+export const dynamic = "force-dynamic";
 
 function normalizeDate(
   value: Date | string | null | undefined

@@ -1,5 +1,6 @@
 import { getBaseUrl, getLatestContentUpdate } from "@/lib/sitemap-utils";
 
+export const dynamic = "force-dynamic";
 export const revalidate = 86400;
 
 type SitemapIndexEntry = {

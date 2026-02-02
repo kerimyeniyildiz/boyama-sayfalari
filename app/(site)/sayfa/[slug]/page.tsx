@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { getColoringPageBySlug } from "@/lib/data/coloring-pages";
 import { buildColoringPagePath } from "@/lib/page-paths";
 
-export const revalidate = 86400;
+export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: {

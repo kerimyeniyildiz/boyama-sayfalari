@@ -9,7 +9,7 @@ import { buildMetadata, siteConfig } from "@/lib/seo";
 import { searchParamsSchema } from "@/lib/validation";
 import { SearchResults } from "@/components/sections/search-results";
 
-export const revalidate = 0;
+export const dynamic = "force-dynamic";
 
 type PageProps = {
   searchParams: Record<string, string | string[] | undefined>;
