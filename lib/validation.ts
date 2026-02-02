@@ -28,6 +28,10 @@ export const searchParamsSchema = z.object({
   sayfa: z.coerce.number().int().min(1).default(1)
 });
 
+export const paginationParamsSchema = z.object({
+  sayfa: z.coerce.number().int().min(1).default(1)
+});
+
 export const adminPageListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(5).max(50).default(20),

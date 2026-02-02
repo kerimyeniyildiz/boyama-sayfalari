@@ -65,6 +65,22 @@ export type TagWithPageRelations = {
   pages: ColoringPageSummary[];
 };
 
+export type PaginatedCategoryPages = {
+  category: Pick<CategoryWithPageRelations, "id" | "name" | "slug" | "createdAt" | "updatedAt">;
+  pages: ColoringPageSummary[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+export type PaginatedTagPages = {
+  tag: Pick<TagWithPageRelations, "id" | "name" | "slug" | "createdAt" | "updatedAt">;
+  pages: ColoringPageSummary[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
 export type DownloadablePage = {
   id: string;
   slug: string;
@@ -432,6 +448,126 @@ export async function getTagWithPages(slug: string) {
     ...tag,
     pages: tag.pages.map((relation) => relation.page)
   };
+}
+
+export async function getCategoryWithPagesPaginated(
+  slug: string,
+  page = 1,
+  pageSize = 24
+): Promise<PaginatedCategoryPages | null> {
+  return cacheResult(
+    ["category-with-pages-paginated", slug, String(page), String(pageSize)],
+    async () => {
+      const category = await prisma.category.findUnique({
+        where: { slug },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          createdAt: true,
+          updatedAt: true
+        }
+      });
+
+      if (!category) {
+        return null;
+      }
+
+      const skip = (page - 1) * pageSize;
+
+      const [total, pages] = await prisma.$transaction([
+        prisma.coloringPage.count({
+          where: {
+            status: PageStatus.PUBLISHED,
+            categories: { some: { categoryId: category.id } }
+          }
+        }),
+        prisma.coloringPage.findMany({
+          where: {
+            status: PageStatus.PUBLISHED,
+            categories: { some: { categoryId: category.id } }
+          },
+          orderBy: { createdAt: "desc" },
+          skip,
+          take: pageSize,
+          include: {
+            categories: { include: { category: true } },
+            tags: { include: { tag: true } },
+            parent: { select: { slug: true } }
+          }
+        })
+      ]);
+
+      return {
+        category,
+        pages: pages as ColoringPageSummary[],
+        total,
+        page,
+        pageSize
+      };
+    },
+    [CACHE_TAGS.categories, CACHE_TAGS.coloringPages, tagForCategory(slug)]
+  );
+}
+
+export async function getTagWithPagesPaginated(
+  slug: string,
+  page = 1,
+  pageSize = 24
+): Promise<PaginatedTagPages | null> {
+  return cacheResult(
+    ["tag-with-pages-paginated", slug, String(page), String(pageSize)],
+    async () => {
+      const tag = await prisma.tag.findUnique({
+        where: { slug },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          createdAt: true,
+          updatedAt: true
+        }
+      });
+
+      if (!tag) {
+        return null;
+      }
+
+      const skip = (page - 1) * pageSize;
+
+      const [total, pages] = await prisma.$transaction([
+        prisma.coloringPage.count({
+          where: {
+            status: PageStatus.PUBLISHED,
+            tags: { some: { tagId: tag.id } }
+          }
+        }),
+        prisma.coloringPage.findMany({
+          where: {
+            status: PageStatus.PUBLISHED,
+            tags: { some: { tagId: tag.id } }
+          },
+          orderBy: { createdAt: "desc" },
+          skip,
+          take: pageSize,
+          include: {
+            categories: { include: { category: true } },
+            tags: { include: { tag: true } },
+            parent: { select: { slug: true } }
+          }
+        })
+      ]);
+
+      return {
+        tag,
+        pages: pages as ColoringPageSummary[],
+        total,
+        page,
+        pageSize
+      };
+    },
+    [CACHE_TAGS.tags, CACHE_TAGS.coloringPages, tagForTag(slug)]
+  );
 }
 
 export async function getDownloadablePage(slug: string) {
