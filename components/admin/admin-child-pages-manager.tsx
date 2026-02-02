@@ -25,7 +25,7 @@ type AdminChildPagesManagerProps = {
   parentId: string;
   parentEditId?: string;
   isMainPage: boolean;
-  children: ChildPageSummary[];
+  childPages: ChildPageSummary[];
 };
 
 function formatDate(value: string) {
@@ -44,7 +44,7 @@ export function AdminChildPagesManager({
   parentId,
   parentEditId,
   isMainPage,
-  children
+  childPages
 }: AdminChildPagesManagerProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -133,13 +133,13 @@ export function AdminChildPagesManager({
       </div>
 
       <div className="space-y-4">
-        {children.length === 0 ? (
+        {childPages.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-brand-dark/20 bg-brand-light/30 px-4 py-6 text-sm text-brand-dark/70">
             Henüz alt boyama sayfası yok. Aşağıdan yeni görseller yükleyebilirsiniz.
           </p>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {children.map((child) => (
+            {childPages.map((child) => (
               <div
                 key={child.id}
                 className="flex flex-col gap-3 rounded-2xl border border-brand-dark/10 bg-white p-4 shadow-card"
@@ -218,3 +218,4 @@ export function AdminChildPagesManager({
     </section>
   );
 }
+

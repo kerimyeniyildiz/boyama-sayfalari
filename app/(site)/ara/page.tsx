@@ -9,7 +9,6 @@ import { buildMetadata, siteConfig } from "@/lib/seo";
 import { searchParamsSchema } from "@/lib/validation";
 import { SearchResults } from "@/components/sections/search-results";
 
-export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 type PageProps = {

@@ -14,7 +14,7 @@ import { CategorySection } from "@/components/sections/category-section";
 import { LatestSection } from "@/components/sections/latest-section";
 import { TagCloud } from "@/components/sections/tag-cloud";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 86400;
 
 export async function generateMetadata() {
   return buildMetadata({

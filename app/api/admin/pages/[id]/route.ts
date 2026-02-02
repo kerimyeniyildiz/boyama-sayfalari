@@ -9,8 +9,11 @@ import { generateImageAssets, generatePdfFromImage, getBufferSize } from "@/lib/
 import { uploadToR2, deleteFromR2 } from "@/lib/r2";
 import { buildColoringPagePath } from "@/lib/page-paths";
 
+type SlugifyOptions = Record<string, unknown>;
+type SlugifyFn = (input: string, options?: SlugifyOptions) => string;
+
 const slugifyTr = (value: string) =>
-  (slugify as unknown as (input: string, options?: any) => string)(value, {
+  (slugify as unknown as SlugifyFn)(value, {
     lower: true,
     locale: "tr"
   });

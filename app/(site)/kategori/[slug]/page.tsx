@@ -7,7 +7,7 @@ import { buildColoringPageUrl } from "@/lib/page-paths";
 import { JsonLd } from "@/components/seo/json-ld";
 import { CategoryCollection } from "@/components/sections/category-collection";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 86400;
 
 type PageProps = {
   params: {

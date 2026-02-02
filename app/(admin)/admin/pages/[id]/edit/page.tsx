@@ -61,7 +61,7 @@ export default async function EditPage({ params }: PageProps) {
         parentId={page.id}
         parentEditId={parentEditId}
         isMainPage={isMainPage}
-        children={childSummaries}
+        childPages={childSummaries}
       />
     </div>
   );

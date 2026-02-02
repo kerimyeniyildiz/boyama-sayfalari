@@ -13,6 +13,14 @@ type ReplicatePrediction<TOutput = unknown> = {
   };
 };
 
+function getReplicateToken(): string {
+  const token = env.REPLICATE_API_TOKEN;
+  if (!token || token.trim().length === 0) {
+    throw new Error("REPLICATE_API_TOKEN bulunamadÄ±. AI gÃ¶rsel Ã¼retimi iÃ§in env deÄŸerini tanÄ±mlayÄ±n.");
+  }
+  return token;
+}
+
 async function sleep(ms: number) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
@@ -23,12 +31,13 @@ async function requestReplicate<TOutput = unknown>(
   modelPath: string,
   input: Record<string, unknown>
 ): Promise<ReplicatePrediction<TOutput>> {
+  const token = getReplicateToken();
   const response = await fetch(`${REPLICATE_API_BASE}/models/${modelPath}/predictions`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       "Accept": "application/json; charset=utf-8",
-      Authorization: `Token ${env.REPLICATE_API_TOKEN}`
+      Authorization: `Token ${token}`
     },
     body: JSON.stringify({ input })
   });
@@ -45,7 +54,7 @@ async function requestReplicate<TOutput = unknown>(
     const poll = await fetch(prediction.urls.get, {
       headers: {
         "Accept": "application/json; charset=utf-8",
-        Authorization: `Token ${env.REPLICATE_API_TOKEN}`
+        Authorization: `Token ${token}`
       }
     });
 

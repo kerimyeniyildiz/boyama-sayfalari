@@ -1,5 +1,6 @@
 import { unstable_cache } from "next/cache";
-import { PageStatus, Prisma } from "@prisma/client";
+import { PageStatus } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
 
@@ -408,7 +409,7 @@ export async function getTagWithPages(slug: string) {
 }
 
 export async function getDownloadablePage(slug: string) {
-  return prisma.coloringPage.findUnique({
+  return prisma.coloringPage.findFirst({
     where: { slug, status: PageStatus.PUBLISHED },
     select: {
       id: true,
@@ -420,6 +421,13 @@ export async function getDownloadablePage(slug: string) {
   });
 }
 
+export async function getViewablePage(slug: string) {
+  return prisma.coloringPage.findFirst({
+    where: { slug, status: PageStatus.PUBLISHED },
+    select: { id: true }
+  });
+}
+
 export async function incrementDownloads(pageId: string) {
   return prisma.coloringPage.update({
     where: { id: pageId },
@@ -427,5 +435,15 @@ export async function incrementDownloads(pageId: string) {
       downloads: { increment: 1 }
     },
     select: { downloads: true }
+  });
+}
+
+export async function incrementViews(pageId: string) {
+  return prisma.coloringPage.update({
+    where: { id: pageId },
+    data: {
+      views: { increment: 1 }
+    },
+    select: { views: true }
   });
 }

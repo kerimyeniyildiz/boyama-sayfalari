@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { Route } from "next";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import type { z } from "zod";
 
 import { loginSchema } from "@/lib/validation";
 import { Input } from "@/components/ui/input";

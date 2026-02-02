@@ -27,7 +27,7 @@ const envSchema = z.object({
   R2_PUBLIC_URL: z.string().url(),
   PLAUSIBLE_DOMAIN: z.string().optional(),
   PLAUSIBLE_SCRIPT_SRC: z.string().url().optional(),
-  REPLICATE_API_TOKEN: z.string().min(1)
+  REPLICATE_API_TOKEN: z.string().min(1).optional()
 });
 
 export const env = envSchema.parse(process.env);

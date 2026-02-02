@@ -1,4 +1,4 @@
-import { PageStatus, Prisma } from "@prisma/client";
+import type { PageStatus, Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
 import { adminPageListQuerySchema } from "@/lib/validation";

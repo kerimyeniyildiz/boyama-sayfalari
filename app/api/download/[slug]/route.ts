@@ -7,9 +7,22 @@ import {
   incrementDownloads
 } from "@/lib/data/coloring-pages";
 import { prisma } from "@/lib/db";
+import { env } from "@/lib/env";
 import { getSignedDownloadUrl } from "@/lib/r2";
 
 export const runtime = "nodejs";
+
+function resolveClientIp(request: Request): string {
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (forwarded) {
+    const first = forwarded.split(",")[0]?.trim();
+    if (first) {
+      return first;
+    }
+  }
+  const realIp = request.headers.get("x-real-ip");
+  return realIp?.trim() || "0.0.0.0";
+}
 
 export async function GET(
   request: Request,
@@ -24,11 +37,11 @@ export async function GET(
     );
   }
 
-  const ip =
-    request.headers.get("x-forwarded-for") ??
-    request.headers.get("x-real-ip") ??
-    "0.0.0.0";
-  const ipHash = crypto.createHash("sha256").update(ip).digest("hex");
+  const ip = resolveClientIp(request);
+  const ipHash = crypto
+    .createHmac("sha256", env.SESSION_SECRET)
+    .update(ip)
+    .digest("hex");
   const userAgent = request.headers.get("user-agent") ?? undefined;
 
   const contentDisposition = `attachment; filename="${page.slug}.pdf"`;

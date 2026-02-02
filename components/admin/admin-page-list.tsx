@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Route } from "next";
-import { PageStatus } from "@prisma/client";
+import type { PageStatus } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

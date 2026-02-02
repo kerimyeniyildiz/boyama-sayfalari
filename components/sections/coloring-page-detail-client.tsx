@@ -9,7 +9,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
 type ColoringPageCardProps = {
-  id: string;
   slug: string;
   title: string;
   imageSrc: string;
@@ -19,7 +18,6 @@ type ColoringPageCardProps = {
 };
 
 export function ColoringPageCard({
-  id,
   slug,
   title,
   imageSrc,

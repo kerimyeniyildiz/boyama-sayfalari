@@ -3,7 +3,6 @@ import type { Route } from "next";
 import { ArrowUpRight } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { buildColoringPagePath } from "@/lib/page-paths";
 
 type DashboardStats = {

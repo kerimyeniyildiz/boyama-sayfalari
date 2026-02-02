@@ -6,9 +6,9 @@ import { FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ColoringPageDetail } from "@/lib/data/coloring-pages";
 import { FALLBACK_BLUR_DATA_URL } from "@/lib/placeholders";
-import { buildColoringPagePath } from "@/lib/page-paths";
 import { getPublicUrl } from "@/lib/r2";
 import { sanitizeSeoContent } from "@/lib/html";
+import { PageViewTracker } from "@/components/analytics/page-view-tracker";
 import { ColoringPageCard } from "./coloring-page-detail-client";
 
 type PageEntry = {
@@ -159,6 +159,7 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
 
   return (
     <section className="container py-12">
+      <PageViewTracker slug={page.slug} />
       <div className="grid gap-10 lg:grid-cols-[3fr_2fr]">
         <div className="relative aspect-[3/4] overflow-hidden rounded-3xl border border-brand-dark/10 bg-white shadow-card">
           <Image
@@ -287,7 +288,6 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
                         return (
                           <ColoringPageCard
                             key={entry.id}
-                            id={entry.id}
                             slug={entry.slug}
                             title={entry.title}
                             imageSrc={entryImage}
