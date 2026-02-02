@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { PageStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
@@ -11,6 +11,12 @@ import {
 } from "@/lib/images";
 import { uploadToR2, deleteFromR2 } from "@/lib/r2";
 import { buildColoringPagePath } from "@/lib/page-paths";
+import {
+  CACHE_TAGS,
+  tagForCategory,
+  tagForColoringPage,
+  tagForTag
+} from "@/lib/cache-tags";
 
 type SlugifyOptions = Record<string, unknown>;
 type SlugifyFn = (input: string, options?: SlugifyOptions) => string;
@@ -291,6 +297,20 @@ export async function POST(
   const tagSlugs = new Set(parent.tags.map((entry) => entry.tag.slug));
   categorySlugs.forEach((slug) => revalidatePath(`/kategori/${slug}`));
   tagSlugs.forEach((slug) => revalidatePath(`/etiket/${slug}`));
+
+  revalidateTag(CACHE_TAGS.coloringPages);
+  revalidateTag(CACHE_TAGS.categories);
+  revalidateTag(CACHE_TAGS.tags);
+  revalidateTag(tagForColoringPage(parent.slug));
+  createdPages.forEach((entry) => {
+    revalidateTag(tagForColoringPage(entry.slug));
+  });
+  categorySlugs.forEach((slug) => {
+    revalidateTag(tagForCategory(slug));
+  });
+  tagSlugs.forEach((slug) => {
+    revalidateTag(tagForTag(slug));
+  });
 
   return NextResponse.json({ success: true, created: createdPages.length });
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { PageStatus } from "@prisma/client";
 import { ZodError } from "zod";
 
@@ -11,6 +11,12 @@ import { generateImageAssets, generatePdfFromImage, getBufferSize } from "@/lib/
 import { uploadToR2, deleteFromR2 } from "@/lib/r2";
 import { generateImageBuffer, generateImageName } from "@/lib/ai/replicate";
 import { buildColoringPagePath } from "@/lib/page-paths";
+import {
+  CACHE_TAGS,
+  tagForCategory,
+  tagForColoringPage,
+  tagForTag
+} from "@/lib/cache-tags";
 
 type SlugifyOptions = Record<string, unknown>;
 type SlugifyFn = (input: string, options?: SlugifyOptions) => string;
@@ -646,6 +652,19 @@ export async function POST(request: Request) {
     });
     metadata.tags.forEach((slug) => {
       revalidatePath(`/etiket/${slug}`);
+    });
+
+    revalidateTag(CACHE_TAGS.coloringPages);
+    revalidateTag(CACHE_TAGS.categories);
+    revalidateTag(CACHE_TAGS.tags);
+    createdPages.forEach((entry) => {
+      revalidateTag(tagForColoringPage(entry.slug));
+    });
+    metadata.categories.forEach((slug) => {
+      revalidateTag(tagForCategory(slug));
+    });
+    metadata.tags.forEach((slug) => {
+      revalidateTag(tagForTag(slug));
     });
 
     return NextResponse.json({ success: true, slug: parentSlug });

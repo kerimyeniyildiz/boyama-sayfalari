@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 import { prisma } from "@/lib/db";
+import { CACHE_TAGS, tagForCategory } from "@/lib/cache-tags";
 
 type ErrorResponse = {
   error: {
@@ -63,6 +64,10 @@ export async function DELETE(
   revalidatePath("/admin/pages/new");
   revalidatePath("/admin/categories");
   revalidatePath(`/kategori/${category.slug}`);
+
+  revalidateTag(CACHE_TAGS.categories);
+  revalidateTag(CACHE_TAGS.coloringPages);
+  revalidateTag(tagForCategory(category.slug));
 
   return NextResponse.json({ success: true });
 }

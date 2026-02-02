@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
 
@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { createTagSchema } from "@/lib/validation";
 import { slugify } from "@/lib/slug";
 import { getAdminTags } from "@/lib/data/admin/tags";
+import { CACHE_TAGS, tagForTag } from "@/lib/cache-tags";
 
 type ErrorResponse = {
   error: {
@@ -80,6 +81,10 @@ export async function POST(request: Request) {
     revalidatePath("/admin/pages");
     revalidatePath("/admin/pages/new");
     revalidatePath("/admin/tags");
+
+    revalidateTag(CACHE_TAGS.tags);
+    revalidateTag(CACHE_TAGS.coloringPages);
+    revalidateTag(tagForTag(tag.slug));
 
     return NextResponse.json({
       success: true,

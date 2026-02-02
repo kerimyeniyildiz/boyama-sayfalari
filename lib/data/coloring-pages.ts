@@ -2,6 +2,12 @@ import { unstable_cache } from "next/cache";
 import { PageStatus } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
 
+import {
+  CACHE_TAGS,
+  tagForCategory,
+  tagForColoringPage,
+  tagForTag
+} from "@/lib/cache-tags";
 import { prisma } from "@/lib/db";
 
 const ONE_DAY_SECONDS = 60 * 60 * 24;
@@ -67,9 +73,14 @@ export type DownloadablePage = {
   downloads: number;
 };
 
-function cacheResult<T>(keyParts: string[], fn: () => Promise<T>) {
+function cacheResult<T>(
+  keyParts: string[],
+  fn: () => Promise<T>,
+  tags: string[] = []
+) {
   return unstable_cache(fn, keyParts, {
-    revalidate: ONE_DAY_SECONDS
+    revalidate: ONE_DAY_SECONDS,
+    tags
   })();
 }
 
@@ -88,7 +99,8 @@ export async function getFeaturedPages(
           tags: { include: { tag: true } },
           parent: { select: { slug: true } }
         }
-      })
+      }),
+    [CACHE_TAGS.coloringPages, CACHE_TAGS.featured]
   );
 }
 
@@ -107,7 +119,8 @@ export async function getRecentPages(
           tags: { include: { tag: true } },
           parent: { select: { slug: true } }
         }
-      })
+      }),
+    [CACHE_TAGS.coloringPages, CACHE_TAGS.recent]
   );
 }
 
@@ -143,7 +156,8 @@ export async function getColoringPageBySlug(
             }
           }
         }
-      })
+      }),
+    [CACHE_TAGS.coloringPages, tagForColoringPage(slug)]
   );
 }
 
@@ -232,7 +246,12 @@ export async function getRelatedPages(
       take: limit,
       orderBy: [{ downloads: "desc" }, { createdAt: "desc" }]
     });
-  });
+  }, [
+    CACHE_TAGS.coloringPages,
+    tagForColoringPage(slug),
+    ...categorySlugs.map(tagForCategory),
+    ...tagSlugs.map(tagForTag)
+  ]);
 }
 
 export async function getCategoriesWithCounts() {
@@ -244,7 +263,8 @@ export async function getCategoriesWithCounts() {
           _count: { select: { pages: true } }
         },
         orderBy: { name: "asc" }
-      })
+      }),
+    [CACHE_TAGS.categories]
   );
 
   return categories.map((category) => ({
@@ -265,7 +285,8 @@ export async function getTagsWithCounts(limit = 50) {
         },
         orderBy: { name: "asc" },
         take: limit
-      })
+      }),
+    [CACHE_TAGS.tags]
   );
 
   return tags.map((tag) => ({
@@ -295,7 +316,8 @@ export async function getColoringPageSlugs() {
       prisma.coloringPage.findMany({
         where: { status: PageStatus.PUBLISHED },
         select: { slug: true }
-      })
+      }),
+    [CACHE_TAGS.coloringPages, CACHE_TAGS.slugs]
   );
   return pages.map((page) => page.slug);
 }
@@ -317,7 +339,8 @@ export async function getPagesByCategorySlug(
           tags: { include: { tag: true } },
           parent: { select: { slug: true } }
         }
-      })
+      }),
+    [CACHE_TAGS.coloringPages, tagForCategory(slug)]
   );
 }
 
@@ -338,7 +361,8 @@ export async function getPagesByTagSlug(
           tags: { include: { tag: true } },
           parent: { select: { slug: true } }
         }
-      })
+      }),
+    [CACHE_TAGS.coloringPages, tagForTag(slug)]
   );
 }
 
@@ -362,7 +386,8 @@ export async function getCategoryWithPages(slug: string) {
             orderBy: { page: { createdAt: "desc" } }
           }
         }
-      })
+      }),
+    [CACHE_TAGS.categories, CACHE_TAGS.coloringPages, tagForCategory(slug)]
   );
 
   if (!category) {
@@ -395,7 +420,8 @@ export async function getTagWithPages(slug: string) {
             orderBy: { page: { createdAt: "desc" } }
           }
         }
-      })
+      }),
+    [CACHE_TAGS.tags, CACHE_TAGS.coloringPages, tagForTag(slug)]
   );
 
   if (!tag) {

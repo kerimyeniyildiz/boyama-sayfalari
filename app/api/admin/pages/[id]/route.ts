@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 import { prisma } from "@/lib/db";
 import { sanitizeSeoContent } from "@/lib/html";
@@ -8,6 +8,12 @@ import { slugify } from "@/lib/slug";
 import { generateImageAssets, generatePdfFromImage, getBufferSize } from "@/lib/images";
 import { uploadToR2, deleteFromR2 } from "@/lib/r2";
 import { buildColoringPagePath } from "@/lib/page-paths";
+import {
+  CACHE_TAGS,
+  tagForCategory,
+  tagForColoringPage,
+  tagForTag
+} from "@/lib/cache-tags";
 
 type SlugifyOptions = Record<string, unknown>;
 type SlugifyFn = (input: string, options?: SlugifyOptions) => string;
@@ -311,6 +317,15 @@ export async function PUT(
       );
     }
 
+    const categorySlugs = new Set([
+      ...existingPage.categories.map((entry) => entry.category.slug),
+      ...metadata.categories
+    ]);
+    const tagSlugs = new Set([
+      ...existingPage.tags.map((entry) => entry.tag.slug),
+      ...metadata.tags
+    ]);
+
     revalidatePath("/");
     revalidatePath("/ara");
     revalidatePath("/sitemap.xml");
@@ -337,6 +352,23 @@ export async function PUT(
     if (updatedPage.parent?.id) {
       revalidatePath(`/admin/pages/${updatedPage.parent.id}/edit`);
     }
+
+    revalidateTag(CACHE_TAGS.coloringPages);
+    revalidateTag(CACHE_TAGS.categories);
+    revalidateTag(CACHE_TAGS.tags);
+    revalidateTag(tagForColoringPage(updatedPage.slug));
+    if (slugChanged) {
+      revalidateTag(tagForColoringPage(existingPage.slug));
+    }
+    if (updatedPage.parent?.slug) {
+      revalidateTag(tagForColoringPage(updatedPage.parent.slug));
+    }
+    categorySlugs.forEach((slug) => {
+      revalidateTag(tagForCategory(slug));
+    });
+    tagSlugs.forEach((slug) => {
+      revalidateTag(tagForTag(slug));
+    });
 
     return NextResponse.json({ success: true, page: updatedPage });
   } catch (error) {
@@ -398,13 +430,16 @@ export async function DELETE(
   const categorySlugs = new Set(page.categories.map((entry) => entry.category.slug));
   const tagSlugs = new Set(page.tags.map((entry) => entry.tag.slug));
   const pathsToRevalidate = new Set<string>([buildColoringPagePath(page)]);
+  const pageSlugsToRevalidate = new Set<string>([page.slug]);
   if (page.parent?.slug) {
     pathsToRevalidate.add(buildColoringPagePath({ slug: page.parent.slug, parentSlug: null }));
+    pageSlugsToRevalidate.add(page.parent.slug);
   }
   page.children.forEach((child) => {
     pathsToRevalidate.add(
       buildColoringPagePath({ slug: child.slug, parentSlug: page.slug })
     );
+    pageSlugsToRevalidate.add(child.slug);
   });
 
   const keysToRemove = new Set<string>();
@@ -455,6 +490,19 @@ export async function DELETE(
   }
   for (const slug of tagSlugs) {
     revalidatePath(`/etiket/${slug}`);
+  }
+
+  revalidateTag(CACHE_TAGS.coloringPages);
+  revalidateTag(CACHE_TAGS.categories);
+  revalidateTag(CACHE_TAGS.tags);
+  pageSlugsToRevalidate.forEach((slug) => {
+    revalidateTag(tagForColoringPage(slug));
+  });
+  for (const slug of categorySlugs) {
+    revalidateTag(tagForCategory(slug));
+  }
+  for (const slug of tagSlugs) {
+    revalidateTag(tagForTag(slug));
   }
 
   return NextResponse.json({ success: true });

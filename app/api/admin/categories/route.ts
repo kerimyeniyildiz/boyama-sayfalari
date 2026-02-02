@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
 
@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { createCategorySchema } from "@/lib/validation";
 import { slugify } from "@/lib/slug";
 import { getAdminCategories } from "@/lib/data/admin/categories";
+import { CACHE_TAGS, tagForCategory } from "@/lib/cache-tags";
 
 type ErrorResponse = {
   error: {
@@ -80,6 +81,10 @@ export async function POST(request: Request) {
     revalidatePath("/admin/pages");
     revalidatePath("/admin/pages/new");
     revalidatePath("/admin/categories");
+
+    revalidateTag(CACHE_TAGS.categories);
+    revalidateTag(CACHE_TAGS.coloringPages);
+    revalidateTag(tagForCategory(category.slug));
 
     return NextResponse.json({
       success: true,
