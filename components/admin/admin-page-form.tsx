@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
+import { z as zod } from "zod";
 import slugify from "slugify";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -53,6 +54,11 @@ type AdminPageFormProps = {
   tags: TagOption[];
 };
 
+const adminPageFormSchema = pageMetadataSchema.extend({
+  status: zod.enum(["DRAFT", "PUBLISHED"]).default("DRAFT"),
+  publishAt: zod.string().optional().default("")
+});
+
 export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
   const router = useRouter();
   const isCreateMode = !page;
@@ -89,7 +95,7 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
   };
 
   const form = useForm<PageFormValues>({
-    resolver: zodResolver(pageMetadataSchema),
+    resolver: zodResolver(adminPageFormSchema),
     defaultValues
   });
 
