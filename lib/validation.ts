@@ -52,20 +52,28 @@ export type AdminPageListQuery = z.infer<typeof adminPageListQuerySchema>;
 
 export const createCategorySchema = z.object({
   name: z.string().min(2).max(80),
-  slug: z
-    .string()
-    .min(2)
-    .max(100)
-    .optional()
-    .transform((value) => (value && value.length > 0 ? value : undefined))
+  slug: z.preprocess(
+    (value) => {
+      if (typeof value !== "string") {
+        return value;
+      }
+      const trimmed = value.trim();
+      return trimmed.length === 0 ? undefined : trimmed;
+    },
+    z.string().min(2).max(100).optional()
+  )
 });
 
 export const createTagSchema = z.object({
   name: z.string().min(2).max(80),
-  slug: z
-    .string()
-    .min(2)
-    .max(100)
-    .optional()
-    .transform((value) => (value && value.length > 0 ? value : undefined))
+  slug: z.preprocess(
+    (value) => {
+      if (typeof value !== "string") {
+        return value;
+      }
+      const trimmed = value.trim();
+      return trimmed.length === 0 ? undefined : trimmed;
+    },
+    z.string().min(2).max(100).optional()
+  )
 });

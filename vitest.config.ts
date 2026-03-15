@@ -3,6 +3,8 @@ import { resolve } from "node:path";
 
 export default defineConfig({
   test: {
+    include: ["tests/unit/**/*.test.ts"],
+    exclude: ["tests/e2e/**"],
     globals: true,
     environment: "jsdom",
     setupFiles: ["./tests/setup/vitest.setup.ts"],

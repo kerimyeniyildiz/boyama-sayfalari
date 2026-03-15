@@ -21,7 +21,7 @@ export function PageViewTracker({ slug }: PageViewTrackerProps) {
       }
       sessionStorage.setItem(storageKey, "1");
     } catch {
-      // sessionStorage kullanÄ±lamayabilir, yine de event gÃ¶nder.
+      // sessionStorage kullanılamayabilir, yine de event gönder.
     }
 
     const url = `/api/view/${encodeURIComponent(normalizedSlug)}`;

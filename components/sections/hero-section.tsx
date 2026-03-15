@@ -16,7 +16,7 @@ type HeroSectionProps = {
 
 export function HeroSection({ categories }: HeroSectionProps) {
   return (
-    <section className="container grid gap-10 py-16 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+    <section className="container py-16">
       <div className="space-y-6">
         <h1 className="sr-only">Boyama sayfaları</h1>
         <span className="inline-flex items-center gap-2 rounded-full border border-brand-dark/20 bg-white px-4 py-2 text-sm text-brand-dark/70">
@@ -61,27 +61,6 @@ export function HeroSection({ categories }: HeroSectionProps) {
               </span>
             </Link>
           ))}
-        </div>
-      </div>
-      <div className="relative">
-        <div className="absolute inset-0 rounded-full bg-brand/30 blur-3xl" />
-        <div className="relative rounded-3xl border border-brand-dark/10 bg-white p-8 shadow-card">
-          <div className="flex flex-col gap-6">
-            <div>
-              <p className="text-sm font-medium text-brand-dark/70">
-                Öne çıkıyor
-              </p>
-              <p className="text-2xl font-semibold text-brand-dark">
-                150+ özel boyama sayfası
-              </p>
-            </div>
-            <ul className="space-y-3 text-sm text-brand-dark/70">
-              <li>PDF ve WebP formatlarında hızlı indirme</li>
-              <li>Cloudflare R2 ile güvenli saklama</li>
-              <li>Arama ve etiketlerle kolay filtreleme</li>
-              <li>SEO ve performans için optimize edildi</li>
-            </ul>
-          </div>
         </div>
       </div>
     </section>

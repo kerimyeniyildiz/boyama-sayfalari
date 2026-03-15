@@ -8,7 +8,7 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { TagCollection } from "@/components/sections/tag-collection";
 import { paginationParamsSchema } from "@/lib/validation";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 type PageProps = {
   params: {

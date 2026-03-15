@@ -16,7 +16,7 @@ type ReplicatePrediction<TOutput = unknown> = {
 function getReplicateToken(): string {
   const token = env.REPLICATE_API_TOKEN;
   if (!token || token.trim().length === 0) {
-    throw new Error("REPLICATE_API_TOKEN bulunamadÄ±. AI gÃ¶rsel Ã¼retimi iÃ§in env deÄŸerini tanÄ±mlayÄ±n.");
+    throw new Error("REPLICATE_API_TOKEN bulunamadı. AI görsel üretimi için env değerini tanımlayın.");
   }
   return token;
 }

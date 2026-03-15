@@ -24,10 +24,10 @@ describe("pageMetadataSchema", () => {
       title: "Orman Dostları",
       slug: "orman-dostlari",
       categories: ["hayvanlar"],
-      tags: ["orman"]
+      tags: ["orman"],
+      description: "Orman dostlari temali boyama sayfasi koleksiyonu."
     });
 
     expect(result.success).toBe(true);
   });
 });
-

@@ -20,7 +20,7 @@ export async function POST(
   const page = await getViewablePage(slug);
   if (!page) {
     return NextResponse.json(
-      { error: "Boyama sayfasÄ± bulunamadÄ±." },
+      { error: "Boyama sayfası bulunamadı." },
       { status: 404, headers: { "Cache-Control": "no-store" } }
     );
   }
