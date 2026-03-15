@@ -4,6 +4,8 @@ type RateLimitBucket = {
 };
 
 const store = new Map<string, RateLimitBucket>();
+const CLEANUP_EVERY_N_CALLS = 200;
+let consumeCalls = 0;
 
 type ConsumeRateLimitInput = {
   key: string;
@@ -24,6 +26,15 @@ export function consumeRateLimit({
   windowMs,
   now = Date.now()
 }: ConsumeRateLimitInput): RateLimitResult {
+  consumeCalls += 1;
+  if (consumeCalls % CLEANUP_EVERY_N_CALLS === 0) {
+    for (const [storeKey, bucket] of store.entries()) {
+      if (now >= bucket.resetAt) {
+        store.delete(storeKey);
+      }
+    }
+  }
+
   const existing = store.get(key);
 
   if (!existing || now >= existing.resetAt) {

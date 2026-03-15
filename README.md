@@ -35,7 +35,12 @@ Next.js App Router tabanlı, Prisma + PostgreSQL kullanan ve Cloudflare R2 üzer
    cp .env.example .env.local
    ```
 
-3. Yönetici için bcrypt hash üretin ve `.env.local` içine ekleyin:
+3. Admin girişini ayarlayın (`.env.local` içinde):
+
+   - Kolay kurulum: `ADMIN_EMAIL` + `ADMIN_PASSWORD`
+   - Alternatif: `ADMIN_EMAIL` + `ADMIN_PASSWORD_HASH`
+
+   Hash kullanmak isterseniz:
 
    ```bash
    npm run admin:password -- <yeni-parola>
@@ -95,5 +100,4 @@ Next.js App Router tabanlı, Prisma + PostgreSQL kullanan ve Cloudflare R2 üzer
 - `PLAUSIBLE_*` değişkenleri opsiyonel, sadece analitik scripti ekler.
 - Admin paneline giriş: `/admin/login` (env dosyasındaki e-posta + şifre).
 - Slug değişikliklerinde admin paneli PDF ve kapak dosyasının yeniden yüklenmesini ister.
-
 

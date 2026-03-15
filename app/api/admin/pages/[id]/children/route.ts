@@ -9,6 +9,7 @@ import {
   generatePdfFromImage,
   getBufferSize
 } from "@/lib/images";
+import { detectImageMimeTypeFromBuffer } from "@/lib/image-sniff";
 import { uploadToR2, deleteFromR2 } from "@/lib/r2";
 import { buildColoringPagePath } from "@/lib/page-paths";
 import {
@@ -104,11 +105,10 @@ async function ensureUniqueSlug(baseSlug: string, used: Set<string>) {
 }
 
 async function uploadPageAssets(
-  file: File,
+  imageBuffer: Buffer,
   slug: string,
   uploadedKeys: string[]
 ) {
-  const imageBuffer = Buffer.from(await file.arrayBuffer());
   const pdfBuffer = await generatePdfFromImage(imageBuffer);
   const assets = await generateImageAssets(imageBuffer);
 
@@ -205,6 +205,7 @@ export async function POST(
   const imageFiles = formData
     .getAll("images")
     .filter((value): value is File => value instanceof File && value.size > 0);
+  const validatedImages: Array<{ file: File; buffer: Buffer }> = [];
 
   if (imageFiles.length === 0) {
     return jsonError(
@@ -215,7 +216,10 @@ export async function POST(
   }
 
   for (const file of imageFiles) {
-    if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const detectedMimeType = detectImageMimeTypeFromBuffer(buffer);
+
+    if (!detectedMimeType || !ALLOWED_IMAGE_TYPES.has(detectedMimeType)) {
       return jsonError(
         400,
         "INVALID_IMAGE_TYPE",
@@ -223,13 +227,15 @@ export async function POST(
       );
     }
 
-    if (file.size > MAX_IMAGE_SIZE) {
+    if (buffer.byteLength > MAX_IMAGE_SIZE) {
       return jsonError(
         400,
         "IMAGE_TOO_LARGE",
         `Her görsel en fazla ${MAX_IMAGE_SIZE / (1024 * 1024)}MB olabilir.`
       );
     }
+
+    validatedImages.push({ file, buffer });
   }
 
   const uploadedKeys: string[] = [];
@@ -237,11 +243,11 @@ export async function POST(
   const createdPages: Array<{ slug: string; parentSlug: string }> = [];
 
   try {
-    for (const file of imageFiles) {
-      const baseSlug = deriveSlugFromFile(file);
+    for (const image of validatedImages) {
+      const baseSlug = deriveSlugFromFile(image.file);
       const slug = await ensureUniqueSlug(baseSlug, usedSlugs);
       const titleFromSlug = humanizeSlug(slug);
-      const assets = await uploadPageAssets(file, slug, uploadedKeys);
+      const assets = await uploadPageAssets(image.buffer, slug, uploadedKeys);
 
       await prisma.coloringPage.create({
         data: {

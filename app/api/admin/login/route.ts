@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/db";
@@ -10,6 +11,16 @@ import { loginSchema } from "@/lib/validation";
 const INVALID_CREDENTIALS_MESSAGE = "E-posta veya şifre hatalı.";
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_ATTEMPT_LIMIT = 8;
+const DUMMY_BCRYPT_HASH = "$2a$12$YxYsB4n0e1Cd7wQnU4T2W.rklnv1jH4yj7Z7fFjRn5/HxYJzP9z1S"; // "invalid-password"
+
+function timingSafeStringEqual(left: string, right: string) {
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+  if (leftBuffer.length !== rightBuffer.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(leftBuffer, rightBuffer);
+}
 
 function resolveClientIp(request: Request): string {
   const forwarded = request.headers.get("x-forwarded-for");
@@ -54,19 +65,38 @@ export async function POST(request: Request) {
 
   let admin = await prisma.adminUser.findUnique({ where: { email } });
 
-  if (!admin && email === env.ADMIN_EMAIL) {
-    const matches = await bcrypt.compare(password, env.ADMIN_PASSWORD_HASH);
-    if (matches) {
+  const adminEmail = env.ADMIN_EMAIL;
+  const adminPasswordHash = env.ADMIN_PASSWORD_HASH;
+  const adminPassword = env.ADMIN_PASSWORD;
+
+  if (
+    !admin &&
+    adminEmail &&
+    email === adminEmail &&
+    (adminPasswordHash || adminPassword)
+  ) {
+    const hashMatches = adminPasswordHash
+      ? await bcrypt.compare(password, adminPasswordHash)
+      : false;
+    const plainMatches = adminPassword
+      ? timingSafeStringEqual(password, adminPassword)
+      : false;
+
+    if (hashMatches || plainMatches) {
+      const passwordHashToPersist = adminPasswordHash
+        ? adminPasswordHash
+        : await bcrypt.hash(password, 12);
+
       admin = await prisma.adminUser.upsert({
         where: { email },
         update: {},
-        create: { email, passwordHash: env.ADMIN_PASSWORD_HASH }
+        create: { email, passwordHash: passwordHashToPersist }
       });
     }
   }
 
   if (!admin) {
-    await bcrypt.compare(password, env.ADMIN_PASSWORD_HASH);
+    await bcrypt.compare(password, adminPasswordHash ?? DUMMY_BCRYPT_HASH);
     return NextResponse.json(
       { error: INVALID_CREDENTIALS_MESSAGE },
       { status: 401, headers: { "Cache-Control": "no-store" } }

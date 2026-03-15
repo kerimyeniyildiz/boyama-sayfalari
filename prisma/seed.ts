@@ -1,3 +1,4 @@
+import bcrypt from "bcryptjs";
 import { PageStatus, PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -5,12 +6,16 @@ const prisma = new PrismaClient();
 async function main() {
   const adminEmail = process.env.ADMIN_EMAIL;
   const adminPasswordHash = process.env.ADMIN_PASSWORD_HASH;
+  const adminPassword = process.env.ADMIN_PASSWORD;
 
-  if (!adminEmail || !adminPasswordHash) {
+  if (!adminEmail || (!adminPasswordHash && !adminPassword)) {
     throw new Error(
-      "Seeding requires ADMIN_EMAIL ve ADMIN_PASSWORD_HASH değişkenleri."
+      "Seeding requires ADMIN_EMAIL ve ADMIN_PASSWORD_HASH veya ADMIN_PASSWORD değişkenleri."
     );
   }
+
+  const resolvedAdminPasswordHash =
+    adminPasswordHash ?? (await bcrypt.hash(adminPassword as string, 12));
 
   const categories = [
     { name: "Hayvanlar", slug: "hayvanlar" },
@@ -47,8 +52,8 @@ async function main() {
 
   await prisma.adminUser.upsert({
     where: { email: adminEmail },
-    update: { passwordHash: adminPasswordHash },
-    create: { email: adminEmail, passwordHash: adminPasswordHash }
+    update: { passwordHash: resolvedAdminPasswordHash },
+    create: { email: adminEmail, passwordHash: resolvedAdminPasswordHash }
   });
 
   const categoryMap = Object.fromEntries(
@@ -183,4 +188,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
-

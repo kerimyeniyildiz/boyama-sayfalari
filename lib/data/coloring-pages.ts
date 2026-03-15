@@ -215,11 +215,14 @@ export async function getRelatedPages(
   tagSlugs: string[],
   limit = 6
 ) {
+  const sortedCategorySlugs = [...categorySlugs].sort();
+  const sortedTagSlugs = [...tagSlugs].sort();
+
   const keyParts = [
     "coloring-pages-related",
     slug,
-    categorySlugs.sort().join(","),
-    tagSlugs.sort().join(","),
+    sortedCategorySlugs.join(","),
+    sortedTagSlugs.join(","),
     String(limit)
   ];
 
@@ -265,8 +268,8 @@ export async function getRelatedPages(
   }, [
     CACHE_TAGS.coloringPages,
     tagForColoringPage(slug),
-    ...categorySlugs.map(tagForCategory),
-    ...tagSlugs.map(tagForTag)
+    ...sortedCategorySlugs.map(tagForCategory),
+    ...sortedTagSlugs.map(tagForTag)
   ]);
 }
 

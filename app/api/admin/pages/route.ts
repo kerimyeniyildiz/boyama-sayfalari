@@ -8,6 +8,7 @@ import { sanitizeSeoContent } from "@/lib/html";
 import { pageMetadataSchema } from "@/lib/validation";
 import { slugify } from "@/lib/slug";
 import { generateImageAssets, generatePdfFromImage, getBufferSize } from "@/lib/images";
+import { detectImageMimeTypeFromBuffer } from "@/lib/image-sniff";
 import { uploadToR2, deleteFromR2 } from "@/lib/r2";
 import { generateImageBuffer, generateImageName } from "@/lib/ai/replicate";
 import { buildColoringPagePath } from "@/lib/page-paths";
@@ -47,6 +48,7 @@ type ImageSource = {
   name: string;
   buffer: Buffer;
   mimeType: string;
+  mimeTrusted: boolean;
   label: string;
   slugHint: string;
 };
@@ -238,10 +240,13 @@ async function createSourcesFromPrompts(prompts: string[]): Promise<ImageSource[
       throw new Error(`Görsel üretimi başarısız oldu (satır ${index + 1}): ${(error as Error).message}`);
     }
 
+    const detectedMimeType = detectImageMimeTypeFromBuffer(imageBuffer);
+
     sources.push({
       name: `${uniqueName}.jpg`,
       buffer: imageBuffer,
-      mimeType: "image/jpeg",
+      mimeType: detectedMimeType ?? "application/octet-stream",
+      mimeTrusted: detectedMimeType !== null,
       label: label.length > 0 ? label : toTitleCaseTr(fallbackName),
       slugHint: slugHint.length > 0 ? slugHint : fallbackName
     });
@@ -374,8 +379,11 @@ export async function POST(request: Request) {
   const convertFileToSource = async (file: File, fallbackName: string): Promise<ImageSource> => {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+    const detectedMimeType = detectImageMimeTypeFromBuffer(buffer);
     const name = file.name && file.name.trim().length > 0 ? file.name : fallbackName;
-    const mimeType = file.type && file.type.trim().length > 0 ? file.type : "image/jpeg";
+    const mimeType =
+      detectedMimeType ??
+      (file.type && file.type.trim().length > 0 ? file.type : "application/octet-stream");
     const withoutExtension = name.replace(/\.[^/.]+$/, "");
     const fallbackBase = fallbackName.replace(/\.[^/.]+$/, "");
     const labelInfo = buildLabelAndSlugHint(withoutExtension, fallbackBase);
@@ -385,6 +393,7 @@ export async function POST(request: Request) {
       name,
       buffer,
       mimeType,
+      mimeTrusted: detectedMimeType !== null,
       label: label.length > 0 ? label : fallbackBase,
       slugHint: slugHint.length > 0 ? slugHint : fallbackBase
     };
@@ -449,7 +458,7 @@ export async function POST(request: Request) {
   const [primaryImage, ...additionalImages] = sources;
 
   for (const image of sources) {
-    if (!ALLOWED_IMAGE_TYPES.has(image.mimeType)) {
+    if (!image.mimeTrusted || !ALLOWED_IMAGE_TYPES.has(image.mimeType)) {
       return jsonError(
         400,
         "INVALID_IMAGE_TYPE",

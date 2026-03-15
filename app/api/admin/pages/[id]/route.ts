@@ -6,6 +6,7 @@ import { sanitizeSeoContent } from "@/lib/html";
 import { pageMetadataSchema } from "@/lib/validation";
 import { slugify } from "@/lib/slug";
 import { generateImageAssets, generatePdfFromImage, getBufferSize } from "@/lib/images";
+import { detectImageMimeTypeFromBuffer } from "@/lib/image-sniff";
 import { uploadToR2, deleteFromR2 } from "@/lib/r2";
 import { buildColoringPagePath } from "@/lib/page-paths";
 import {
@@ -86,11 +87,10 @@ function toRichText(value: FormDataEntryValue | null): string {
 }
 
 async function uploadPageAssets(
-  file: File,
+  imageBuffer: Buffer,
   slug: string,
   uploadedKeys: string[]
 ) {
-  const imageBuffer = Buffer.from(await file.arrayBuffer());
   const pdfBuffer = await generatePdfFromImage(imageBuffer);
   const assets = await generateImageAssets(imageBuffer);
 
@@ -173,9 +173,13 @@ export async function PUT(
   const imageFile = (formData.get("image") ?? formData.get("cover")) as
     | File
     | null;
+  let imageBuffer: Buffer | null = null;
 
   if (imageFile) {
-    if (!ALLOWED_IMAGE_TYPES.has(imageFile.type)) {
+    imageBuffer = Buffer.from(await imageFile.arrayBuffer());
+    const detectedMimeType = detectImageMimeTypeFromBuffer(imageBuffer);
+
+    if (!detectedMimeType || !ALLOWED_IMAGE_TYPES.has(detectedMimeType)) {
       return jsonFieldError(
         400,
         "INVALID_IMAGE_TYPE",
@@ -183,7 +187,7 @@ export async function PUT(
       );
     }
 
-    if (imageFile.size > MAX_IMAGE_SIZE) {
+    if (imageBuffer.byteLength > MAX_IMAGE_SIZE) {
       return jsonFieldError(
         400,
         "IMAGE_TOO_LARGE",
@@ -255,8 +259,8 @@ export async function PUT(
       fileSizeBytes: number;
     } | null = null;
 
-    if (imageFile instanceof File) {
-      assetInfo = await uploadPageAssets(imageFile, metadata.slug, uploadedKeys);
+    if (imageBuffer) {
+      assetInfo = await uploadPageAssets(imageBuffer, metadata.slug, uploadedKeys);
       if (existingPage.pdfKey) keysToDelete.push(existingPage.pdfKey);
       if (existingPage.coverImageKey) keysToDelete.push(existingPage.coverImageKey);
       if (existingPage.thumbWebpKey) {
