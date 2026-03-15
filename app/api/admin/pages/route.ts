@@ -131,13 +131,6 @@ function createAssetVersion() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function countWords(value: string) {
-  return value
-    .trim()
-    .split(/\s+/)
-    .filter((token) => token.length > 0).length;
-}
-
 function normalizeGeneratedParagraph(value: string) {
   return value
     .replace(/\s+/g, " ")
@@ -367,9 +360,8 @@ Important:
   let best = "";
   for (const prompt of prompts) {
     const generated = normalizeGeneratedParagraph(await generateTextWithReplicate(prompt));
-    const wordCount = countWords(generated);
     const complete = isParagraphComplete(generated);
-    if (wordCount >= 90 && wordCount <= 130 && complete) {
+    if (complete) {
       return generated;
     }
     if (generated.length > best.length) {
@@ -377,11 +369,11 @@ Important:
     }
   }
 
-  if (best.length > 0 && isParagraphComplete(best)) {
-    return best;
+  if (best.length > 0) {
+    return `${best.replace(/[,:;.!?…\s]+$/g, "").trim()}.`;
   }
 
-  return `${topic} boyama sayfaları ile çocuklar, ebeveynler ve öğretmenler için keyifli bir etkinlik zamanı başlar. ${topic} boyama sayfaları PDF formatında ücretsiz sunulur; ${topic} boyama sayfaları indir seçeneğiyle dosyaları hemen alabilir, ${topic} boyama sayfaları yazdır adımıyla dakikalar içinde baskıya hazır hale getirebilirsiniz. Özellikle çocuklar için ${topic} boyama sayfaları yaratıcılığı destekler, ince motor becerilerini güçlendirir ve eğitici bir deneyim sağlar. Siz de şimdi koleksiyonu inceleyin, uygun sayfayı seçin, PDF indirerek yazdırın ve boyamaya hemen başlayın.`;
+  throw new Error(`${topic} için SEO metni üretilemedi.`);
 }
 
 async function ensureUniqueSlug(baseSlug: string, used: Set<string>) {
