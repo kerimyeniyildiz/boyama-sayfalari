@@ -19,7 +19,8 @@ const envParsers = {
   R2_PUBLIC_URL: z.string().url(),
   PLAUSIBLE_DOMAIN: z.string().optional(),
   PLAUSIBLE_SCRIPT_SRC: z.string().url().optional(),
-  REPLICATE_API_TOKEN: z.string().min(1).optional()
+  REPLICATE_API_TOKEN: z.string().min(1).optional(),
+  INTERNAL_CRON_SECRET: z.string().min(16).optional()
 } as const;
 
 type Env = {

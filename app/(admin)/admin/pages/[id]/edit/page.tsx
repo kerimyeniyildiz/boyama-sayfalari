@@ -35,7 +35,9 @@ export default async function EditPage({ params }: PageProps) {
     description: page.description,
     categories: page.categories,
     tags: page.tags,
-    seoContent: page.seoContent
+    seoContent: page.seoContent,
+    status: page.status,
+    publishAt: page.publishAt instanceof Date ? page.publishAt.toISOString() : page.publishAt
   };
 
   const childSummaries = page.children.map((child) => ({

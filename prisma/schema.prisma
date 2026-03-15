@@ -20,6 +20,7 @@ model ColoringPage {
   license        String?
   sourceUrl      String?
   status         PageStatus  @default(DRAFT)
+  publishAt      DateTime?
   language       String      @default("tr")
   pdfKey         String
   coverImageKey  String
@@ -41,6 +42,7 @@ model ColoringPage {
   parentId       String?
 
   @@index([status])
+  @@index([publishAt])
   @@index([createdAt])
   @@index([searchVector], type: Gin)
   @@index([parentId])

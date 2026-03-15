@@ -100,4 +100,7 @@ Next.js App Router tabanlı, Prisma + PostgreSQL kullanan ve Cloudflare R2 üzer
 - `PLAUSIBLE_*` değişkenleri opsiyonel, sadece analitik scripti ekler.
 - Admin paneline giriş: `/admin/login` (env dosyasındaki e-posta + şifre).
 - Slug değişikliklerinde admin paneli PDF ve kapak dosyasının yeniden yüklenmesini ister.
-
+- Admin panelinde kayıtları `Taslak` olarak tutabilir ve `Yayın tarihi` vererek ileri tarihli planlayabilirsiniz.
+- Planlı yayın için sunucu cron'u aşağıdaki endpoint'i çağırmalıdır:
+  - `POST /api/internal/publish-scheduled`
+  - Header: `x-internal-cron-secret: <INTERNAL_CRON_SECRET>`

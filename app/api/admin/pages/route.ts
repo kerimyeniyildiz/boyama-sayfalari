@@ -1,17 +1,17 @@
 import { NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { PageStatus } from "@prisma/client";
 import { ZodError } from "zod";
 
 import { prisma } from "@/lib/db";
 import { sanitizeSeoContent } from "@/lib/html";
-import { pageMetadataSchema } from "@/lib/validation";
+import { pageMetadataSchema, statusSchema } from "@/lib/validation";
 import { slugify } from "@/lib/slug";
 import { generateImageAssets, generatePdfFromImage, getBufferSize } from "@/lib/images";
 import { detectImageMimeTypeFromBuffer } from "@/lib/image-sniff";
 import { uploadToR2, deleteFromR2 } from "@/lib/r2";
 import { generateImageBuffer, generateImageName } from "@/lib/ai/replicate";
 import { buildColoringPagePath } from "@/lib/page-paths";
+import { resolvePublicationState } from "@/lib/publishing";
 import {
   CACHE_TAGS,
   tagForCategory,
@@ -487,6 +487,28 @@ export async function POST(request: Request) {
   const submittedCategories = collectStrings(formData.getAll("categories"));
   const submittedTags = collectStrings(formData.getAll("tags"));
   const seoContentRaw = toRichText(formData.get("seoContent"));
+  const statusRaw = toString(formData.get("status"));
+  const publishAtRaw = toString(formData.get("publishAt"));
+
+  const statusParsed = statusSchema.safeParse(statusRaw || "DRAFT");
+  if (!statusParsed.success) {
+    return jsonError(400, "VALIDATION_ERROR", "Yayın durumu geçersiz.", {
+      status: ["Yayın durumu geçersiz."]
+    });
+  }
+
+  const publicationState = resolvePublicationState({
+    requestedStatus: statusParsed.data,
+    publishAtRaw
+  });
+  if (!publicationState.ok) {
+    return jsonError(
+      400,
+      "VALIDATION_ERROR",
+      publicationState.message,
+      publicationState.fieldErrors
+    );
+  }
 
   const trimmedTitle = title.trim();
   const trimmedSlugInput = rawSlug.trim();
@@ -580,7 +602,8 @@ export async function POST(request: Request) {
         description: metadata.description,
         seoContent: normalizedSeoContent,
         orientation: "PORTRAIT",
-        status: PageStatus.PUBLISHED,
+        status: publicationState.status,
+        publishAt: publicationState.publishAt,
         language: "tr",
         pdfKey: parentAssets.pdfKey,
         coverImageKey: parentAssets.coverKey,
@@ -619,7 +642,8 @@ export async function POST(request: Request) {
           description: `${computedTitle} boyama sayfası.`,
           seoContent: null,
           orientation: "PORTRAIT",
-          status: PageStatus.PUBLISHED,
+          status: publicationState.status,
+          publishAt: publicationState.publishAt,
           language: "tr",
           pdfKey: childAssets.pdfKey,
           coverImageKey: childAssets.coverKey,

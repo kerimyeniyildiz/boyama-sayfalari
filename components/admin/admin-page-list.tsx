@@ -26,6 +26,16 @@ function formatDate(date: Date) {
   });
 }
 
+function formatDateTime(date: Date) {
+  return date.toLocaleString("tr-TR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
 function buildQueryObject(
   base: AdminPageListResult["filters"],
   pageSize: number,
@@ -144,6 +154,11 @@ export function AdminPageList({ items, pagination, filters }: AdminPageListProps
                       >
                         {statusLabels[page.status]}
                       </Badge>
+                      {page.publishAt ? (
+                        <p className="mt-1 text-xs text-brand-dark/60">
+                          Planlı: {formatDateTime(page.publishAt)}
+                        </p>
+                      ) : null}
                     </td>
                     <td className="px-6 py-4 text-right text-brand-dark">
                       {page.downloads.toLocaleString("tr-TR")}

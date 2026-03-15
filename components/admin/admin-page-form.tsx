@@ -13,9 +13,13 @@ import { Button } from "@/components/ui/button";
 import { SimpleRichTextEditor } from "@/components/admin/simple-rich-text-editor";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
-type PageFormValues = z.infer<typeof pageMetadataSchema>;
+type PageFormValues = z.infer<typeof pageMetadataSchema> & {
+  status: "DRAFT" | "PUBLISHED";
+  publishAt: string;
+};
 
 type CategoryOption = {
   id: string;
@@ -39,6 +43,8 @@ type PagePayload = {
   categories: Array<{ category: { slug: string } }>;
   tags: Array<{ tag: { slug: string } }>;
   seoContent: string | null;
+  status: "DRAFT" | "PUBLISHED";
+  publishAt: string | null;
 };
 
 type AdminPageFormProps = {
@@ -56,13 +62,27 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
   const [selectedImage, setSelectedImage] = useState<FileList | null>(null);
   const [promptFile, setPromptFile] = useState<File | null>(null);
 
+  const toDateTimeLocalInput = (value: string | null | undefined) => {
+    if (!value) {
+      return "";
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return "";
+    }
+    const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return localDate.toISOString().slice(0, 16);
+  };
+
   const defaultValues: PageFormValues = {
     title: page?.title ?? "",
     slug: page?.slug ?? "",
     description: page?.description ?? "",
     categories: page?.categories.map((item) => item.category.slug) ?? [],
     tags: page?.tags.map((item) => item.tag.slug) ?? [],
-    seoContent: page?.seoContent ?? ""
+    seoContent: page?.seoContent ?? "",
+    status: page?.status ?? "DRAFT",
+    publishAt: toDateTimeLocalInput(page?.publishAt)
   };
 
   const form = useForm<PageFormValues>({
@@ -88,6 +108,8 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
     formData.append("slug", values.slug);
     formData.append("description", values.description.trim());
     formData.append("seoContent", values.seoContent ?? "");
+    formData.append("status", values.status);
+    formData.append("publishAt", values.publishAt.trim());
     values.categories.forEach((slug) => formData.append("categories", slug));
     values.tags.forEach((slug) => formData.append("tags", slug));
 
@@ -215,6 +237,29 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
           {errors.description?.message ? (
             <p className="text-xs text-red-500">{errors.description.message}</p>
           ) : null}
+        </div>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="status">Durum</Label>
+          <Select id="status" {...form.register("status")} disabled={isPending}>
+            <option value="DRAFT">Taslak</option>
+            <option value="PUBLISHED">Yayınla</option>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="publishAt">Yayın tarihi (opsiyonel)</Label>
+          <Input
+            id="publishAt"
+            type="datetime-local"
+            {...form.register("publishAt")}
+            disabled={isPending}
+          />
+          <p className="text-xs text-brand-dark/60">
+            Gelecek tarih seçerseniz içerik taslak kalır ve planlanan tarihte otomatik yayınlanır.
+          </p>
         </div>
       </div>
 
@@ -373,4 +418,3 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
     </form>
   );
 }
-

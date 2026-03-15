@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { PageStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
 import { slugify } from "@/lib/slug";
@@ -255,7 +254,8 @@ export async function POST(
           title: titleFromSlug,
           description: `${titleFromSlug} boyama sayfası.`,
           orientation: parent.orientation,
-          status: PageStatus.PUBLISHED,
+          status: parent.status,
+          publishAt: parent.publishAt,
           language: parent.language,
           pdfKey: assets.pdfKey,
           coverImageKey: assets.coverKey,

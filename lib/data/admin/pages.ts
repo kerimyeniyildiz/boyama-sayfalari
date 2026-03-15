@@ -13,6 +13,7 @@ export type AdminPageListResult = {
     status: PageStatus;
     downloads: number;
     language: string;
+    publishAt: Date | null;
     createdAt: Date;
     updatedAt: Date;
   }>;
@@ -70,6 +71,7 @@ export async function getAdminPages(
         status: true,
         downloads: true,
         language: true,
+        publishAt: true,
         createdAt: true,
         updatedAt: true
       }

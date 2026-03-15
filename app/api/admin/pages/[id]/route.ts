@@ -3,12 +3,13 @@ import { revalidatePath, revalidateTag } from "next/cache";
 
 import { prisma } from "@/lib/db";
 import { sanitizeSeoContent } from "@/lib/html";
-import { pageMetadataSchema } from "@/lib/validation";
+import { pageMetadataSchema, statusSchema } from "@/lib/validation";
 import { slugify } from "@/lib/slug";
 import { generateImageAssets, generatePdfFromImage, getBufferSize } from "@/lib/images";
 import { detectImageMimeTypeFromBuffer } from "@/lib/image-sniff";
 import { uploadToR2, deleteFromR2 } from "@/lib/r2";
 import { buildColoringPagePath } from "@/lib/page-paths";
+import { resolvePublicationState } from "@/lib/publishing";
 import {
   CACHE_TAGS,
   tagForCategory,
@@ -203,6 +204,39 @@ export async function PUT(
   const submittedCategories = collectStrings(formData.getAll("categories"));
   const submittedTags = collectStrings(formData.getAll("tags"));
   const seoContentRaw = toRichText(formData.get("seoContent"));
+  const statusRaw = toString(formData.get("status"));
+  const publishAtRaw = toString(formData.get("publishAt"));
+  const hasPublishAtField = formData.has("publishAt");
+
+  const statusParsed = statusSchema.safeParse(statusRaw || existingPage.status);
+  if (!statusParsed.success) {
+    return jsonFieldError(
+      400,
+      "VALIDATION_ERROR",
+      "Yayın durumu geçersiz.",
+      { status: ["Yayın durumu geçersiz."] }
+    );
+  }
+
+  const publishAtInput =
+    hasPublishAtField
+      ? publishAtRaw
+      : existingPage.publishAt
+        ? existingPage.publishAt.toISOString()
+        : "";
+
+  const publicationState = resolvePublicationState({
+    requestedStatus: statusParsed.data,
+    publishAtRaw: publishAtInput
+  });
+  if (!publicationState.ok) {
+    return jsonFieldError(
+      400,
+      "VALIDATION_ERROR",
+      publicationState.message,
+      publicationState.fieldErrors
+    );
+  }
 
   const metadataInput = {
     title,
@@ -289,6 +323,8 @@ export async function PUT(
         title: metadata.title,
         description: metadata.description,
         seoContent: normalizedSeoContent,
+        status: publicationState.status,
+        publishAt: publicationState.publishAt,
         pdfKey: assetInfo?.pdfKey ?? existingPage.pdfKey,
         coverImageKey: assetInfo?.coverKey ?? existingPage.coverImageKey,
         thumbWebpKey: assetInfo?.thumbLargeKey ?? existingPage.thumbWebpKey,
