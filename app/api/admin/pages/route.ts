@@ -508,8 +508,8 @@ export async function POST(request: Request) {
   }
 
   if (sources.length === 0) {
-    return jsonError(400, "IMAGE_REQUIRED", "Görsel yüklenmedi.", {
-      image: ["Prompt satırları girmediyseniz en az bir görsel yüklemelisiniz."]
+    return jsonError(400, "PROMPTS_REQUIRED", "En az bir görsel promptu girilmelidir.", {
+      promptLines: ["Her satıra bir görsel promptu girin."]
     });
   }
 

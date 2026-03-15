@@ -132,12 +132,13 @@ export async function generateImageName(prompt: string): Promise<string> {
 }
 
 export async function generateTextWithReplicate(prompt: string): Promise<string> {
-  const prediction = await requestReplicate<string | string[] | null>("openai/gpt-5", {
+  const prediction = await requestReplicate<string | string[] | null>("google/gemini-3-flash", {
     prompt,
-    messages: [],
-    verbosity: "medium",
-    image_input: [],
-    reasoning_effort: "minimal"
+    images: [],
+    temperature: 0.7,
+    top_p: 0.95,
+    thinking_level: "low",
+    max_output_tokens: 2048
   });
 
   const rawText = extractRawText(prediction.output);

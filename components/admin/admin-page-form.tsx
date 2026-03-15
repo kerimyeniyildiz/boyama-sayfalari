@@ -97,10 +97,13 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
   const descriptionValue = form.watch("description") ?? "";
 
   useEffect(() => {
+    if (isCreateMode && anchor.trim().length > 0) {
+      return;
+    }
     if (!slugEdited && titleValue) {
       form.setValue("slug", slugify(titleValue, { lower: true, locale: "tr" }));
     }
-  }, [titleValue, slugEdited, form]);
+  }, [titleValue, slugEdited, form, isCreateMode, anchor]);
 
   useEffect(() => {
     if (!isCreateMode) {
@@ -455,27 +458,29 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
         ) : null}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="image">Görsel</Label>
-        <Input
-          id="image"
-          type="file"
-          multiple
-          accept="image/png,image/jpeg,image/webp,image/svg+xml"
-          disabled={isPending}
-          onChange={(event) => {
-            const files = event.target.files;
-            setSelectedImage(files && files.length > 0 ? files : null);
-            setImageError(null);
-          }}
-        />
-        <p className="text-xs text-brand-dark/60">
-          Prompt satırı girmediyseniz en az bir dikey görsel seçin. Prompt satırları girildiyse bu alanı boş bırakabilirsiniz.
-        </p>
-        {imageError ? (
-          <p className="text-xs text-red-500">{imageError}</p>
-        ) : null}
-      </div>
+      {!isCreateMode ? (
+        <div className="space-y-2">
+          <Label htmlFor="image">Görsel</Label>
+          <Input
+            id="image"
+            type="file"
+            multiple
+            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+            disabled={isPending}
+            onChange={(event) => {
+              const files = event.target.files;
+              setSelectedImage(files && files.length > 0 ? files : null);
+              setImageError(null);
+            }}
+          />
+          <p className="text-xs text-brand-dark/60">
+            Prompt satırı girmediyseniz en az bir dikey görsel seçin. Prompt satırları girildiyse bu alanı boş bırakabilirsiniz.
+          </p>
+          {imageError ? (
+            <p className="text-xs text-red-500">{imageError}</p>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="flex items-center justify-between">
         <div className="space-y-1 text-xs text-brand-dark/60">
