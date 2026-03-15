@@ -289,10 +289,7 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
             />
           ) : null}
           {filteredExtraEntries.length > 0 ? (
-            <div className="space-y-2">
-              <h2 className="text-2xl font-semibold text-brand-dark">{preCardsHeading}</h2>
-              <p className="text-lg font-semibold text-brand-dark">Boyama sayfalarını keşfet:</p>
-            </div>
+            <h2 className="text-2xl font-semibold text-brand-dark">{preCardsHeading}</h2>
           ) : null}
           <div className="space-y-10">
             {cardGroups.map((group, groupIndex) => {

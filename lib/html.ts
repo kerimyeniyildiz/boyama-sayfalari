@@ -44,12 +44,19 @@ const sanitizeOptions: sanitizeHtml.IOptions = {
   }
 };
 
+function normalizeMarkdownBold(value: string) {
+  return value
+    .replace(/\*\*(.+?)\*\*/gs, "<strong>$1</strong>")
+    .replace(/__(.+?)__/gs, "<strong>$1</strong>");
+}
+
 export function sanitizeSeoContent(value: string | null | undefined): string {
   const trimmed = typeof value === "string" ? value.trim() : "";
   if (!trimmed) {
     return "";
   }
 
-  const sanitized = sanitizeHtml(trimmed, sanitizeOptions).trim();
+  const normalized = normalizeMarkdownBold(trimmed);
+  const sanitized = sanitizeHtml(normalized, sanitizeOptions).trim();
   return sanitized;
 }

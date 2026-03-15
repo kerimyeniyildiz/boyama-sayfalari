@@ -166,6 +166,46 @@ function toTitleCaseTr(value: string) {
     .join(" ");
 }
 
+function deriveLabelFromPrompt(prompt: string) {
+  const normalized = normalizeWhitespace(
+    prompt
+      .replace(/[`"']/g, " ")
+      .replace(/[^0-9A-Za-zÇĞİÖŞÜçğıöşü\s-]/g, " ")
+  );
+  const tokens = normalized
+    .split(" ")
+    .filter((token) => token.length > 1)
+    .slice(0, 5);
+
+  if (tokens.length === 0) {
+    return "Boyama Sayfası";
+  }
+
+  return toTitleCaseTr(tokens.join(" "));
+}
+
+function sanitizeAiGeneratedLabel(raw: string) {
+  const normalized = normalizeWhitespace(
+    raw
+      .replace(/[`"']/g, " ")
+      .replace(/\\[a-z]/gi, " ")
+      .replace(/[\[\]{}()<>]/g, " ")
+      .replace(/[^0-9A-Za-zÇĞİÖŞÜçğıöşü\s-]/g, " ")
+  );
+  const lowered = normalized.toLocaleLowerCase("tr-TR");
+  const looksLikeToolDump =
+    /action|action_input|thought|prompt|text2im|dalle|json|kullanicinin|istedigi|tarzinda/.test(
+      lowered
+    );
+
+  if (looksLikeToolDump) {
+    return "";
+  }
+
+  const compact = normalized.split(" ").filter((part) => part.length > 0).slice(0, 6).join(" ");
+  return toTitleCaseTr(compact);
+}
+
 function buildTopicFromAnchor(anchor: string) {
   return toTitleCaseTr(normalizeWhitespace(anchor));
 }
@@ -182,19 +222,8 @@ function normalizeForComparison(value: string) {
 }
 
 function buildLabelAndSlugHint(rawName: string, fallback: string) {
-  // Türkçe karakterleri koruyarak temizleme yap
-  const cleanedRaw = rawName
-    .normalize("NFC")
-    .replace(/[\r\n\t]/g, " ")
-    .replace(/["'`]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  const cleanedFallback = fallback
-    .normalize("NFC")
-    .replace(/[\r\n\t]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  const cleanedRaw = sanitizeAiGeneratedLabel(rawName);
+  const cleanedFallback = deriveLabelFromPrompt(fallback);
 
   let baseSource = cleanedRaw;
   if (!hasWordCharacters(baseSource)) {
@@ -205,7 +234,7 @@ function buildLabelAndSlugHint(rawName: string, fallback: string) {
   }
 
   return {
-    label: baseSource,
+    label: toTitleCaseTr(baseSource),
     slugHint: baseSource
   };
 }
