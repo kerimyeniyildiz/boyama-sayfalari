@@ -55,12 +55,15 @@ type AdminPageFormProps = {
 
 export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
   const router = useRouter();
+  const isCreateMode = !page;
   const [slugEdited, setSlugEdited] = useState(Boolean(page?.slug));
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<FileList | null>(null);
-  const [promptFile, setPromptFile] = useState<File | null>(null);
+  const [anchor, setAnchor] = useState("");
+  const [promptLines, setPromptLines] = useState("");
+  const [pageCount, setPageCount] = useState(() => Math.floor(Math.random() * 61) + 60);
 
   const toDateTimeLocalInput = (value: string | null | undefined) => {
     if (!value) {
@@ -99,6 +102,38 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
     }
   }, [titleValue, slugEdited, form]);
 
+  useEffect(() => {
+    if (!isCreateMode) {
+      return;
+    }
+
+    const normalizedAnchor = anchor.trim();
+    if (normalizedAnchor.length === 0) {
+      return;
+    }
+
+    const titleAnchor = normalizedAnchor
+      .split(" ")
+      .filter((segment) => segment.length > 0)
+      .map((segment) => {
+        const [first = "", ...rest] = Array.from(segment);
+        return `${first.toLocaleUpperCase("tr-TR")}${rest.join("").toLocaleLowerCase("tr-TR")}`;
+      })
+      .join(" ");
+
+    const baseSlug = slugify(normalizedAnchor, { lower: true, locale: "tr" });
+    if (baseSlug.length > 0) {
+      const nextSlug = baseSlug.endsWith("boyama") ? baseSlug : `${baseSlug}-boyama`;
+      form.setValue("slug", nextSlug, { shouldDirty: true });
+    }
+    form.setValue("title", `${titleAnchor} Boyama Sayfaları | ${pageCount}+ Ücretsiz PDF`, {
+      shouldDirty: true
+    });
+    form.setValue("description", "Bu alan anchor girdisine gore kayit sirasinda otomatik uretilir.", {
+      shouldDirty: true
+    });
+  }, [anchor, form, isCreateMode, pageCount]);
+
   const errors = form.formState.errors;
 
   const handleSubmit = form.handleSubmit((values) => {
@@ -110,12 +145,11 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
     formData.append("seoContent", values.seoContent ?? "");
     formData.append("status", values.status);
     formData.append("publishAt", values.publishAt.trim());
+    formData.append("anchor", anchor.trim());
+    formData.append("pageCount", String(pageCount));
+    formData.append("promptLines", promptLines);
     values.categories.forEach((slug) => formData.append("categories", slug));
     values.tags.forEach((slug) => formData.append("tags", slug));
-
-    if (promptFile) {
-      formData.append("promptFile", promptFile);
-    }
 
     const files = selectedImage ? Array.from(selectedImage) : [];
     if (files.length > 0) {
@@ -194,6 +228,22 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
       ) : null}
 
       <div className="grid gap-6 md:grid-cols-2">
+        {isCreateMode ? (
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="anchor">Anchor</Label>
+            <Input
+              id="anchor"
+              value={anchor}
+              onChange={(event) => setAnchor(event.target.value)}
+              disabled={isPending}
+              placeholder="Örn. Anneler Günü"
+            />
+            <p className="text-xs text-brand-dark/60">
+              Slug ve başlık bu alana göre otomatik üretilir.
+            </p>
+          </div>
+        ) : null}
+
         <div className="space-y-2">
           <Label htmlFor="title">Başlık</Label>
           <Input
@@ -225,14 +275,14 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
           <Textarea
             id="description"
             rows={3}
-            maxLength={155}
+            maxLength={500}
             {...form.register("description")}
             disabled={isPending}
             placeholder="Elsa boyama sayfaları: Çocuklar için eğlenceli, kolay ve indirilebilir çizimler; prenses hayranları hemen renklendirsin!"
           />
           <div className="flex items-center justify-between text-xs text-brand-dark/60">
-            <p>Arama sonuçlarında görünecek açıklamayı 155 karakteri aşmadan yazın.</p>
-            <span>{descriptionValue.length}/155</span>
+            <p>Arama sonuçlarında görünecek açıklamayı 500 karakteri aşmadan yazın.</p>
+            <span>{descriptionValue.length}/500</span>
           </div>
           {errors.description?.message ? (
             <p className="text-xs text-red-500">{errors.description.message}</p>
@@ -342,25 +392,45 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="promptFile">TXT prompt dosyası</Label>
-        <Input
-          id="promptFile"
-          type="file"
-          accept=".txt"
-          disabled={isPending}
+        <Label htmlFor="promptLines">Görsel promptları (her satır bir prompt)</Label>
+        <Textarea
+          id="promptLines"
+          rows={8}
+          value={promptLines}
           onChange={(event) => {
-            const file = event.target.files?.[0] ?? null;
-            setPromptFile(file);
-            if (file) {
+            setPromptLines(event.target.value);
+            if (event.target.value.trim().length > 0) {
               setSelectedImage(null);
               setImageError(null);
             }
           }}
+          disabled={isPending}
+          placeholder="Prompt 1&#10;Prompt 2&#10;Prompt 3"
         />
         <p className="text-xs text-brand-dark/60">
-          Her satır için bir görsel üretim promptu içeren TXT dosyasını yükleyebilirsiniz. Dosya boşsa bu adım atlanır.
+          Dilerseniz buraya satır satır prompt girin. Bu alan doluysa görseller Replicate ile otomatik üretilir.
         </p>
       </div>
+
+      {isCreateMode ? (
+        <div className="space-y-2">
+          <Label htmlFor="pageCount">Başlıktaki PDF sayısı (60-120)</Label>
+          <Input
+            id="pageCount"
+            type="number"
+            min={60}
+            max={120}
+            value={pageCount}
+            onChange={(event) => {
+              const value = Number.parseInt(event.target.value, 10);
+              if (Number.isFinite(value) && value >= 60 && value <= 120) {
+                setPageCount(value);
+              }
+            }}
+            disabled={isPending}
+          />
+        </div>
+      ) : null}
 
       <div className="space-y-2">
         <Label htmlFor="seoContent">SEO metni</Label>
@@ -400,7 +470,7 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
           }}
         />
         <p className="text-xs text-brand-dark/60">
-          TXT dosyası yüklemediyseniz en az bir dikey görsel seçin. Dosya yüklediyseniz bu alanı boş bırakabilirsiniz.
+          Prompt satırı girmediyseniz en az bir dikey görsel seçin. Prompt satırları girildiyse bu alanı boş bırakabilirsiniz.
         </p>
         {imageError ? (
           <p className="text-xs text-red-500">{imageError}</p>

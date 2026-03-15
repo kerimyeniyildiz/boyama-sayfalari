@@ -122,6 +122,16 @@ function sanitizeGeneratedText(rawText: string): string {
 }
 
 export async function generateImageName(prompt: string): Promise<string> {
+  const sanitized = (await generateTextWithReplicate(prompt)).replace(/["'`]/g, "");
+
+  if (sanitized.length === 0) {
+    throw new Error("Geçerli görsel adı elde edilemedi");
+  }
+
+  return sanitized;
+}
+
+export async function generateTextWithReplicate(prompt: string): Promise<string> {
   const prediction = await requestReplicate<string | string[] | null>("openai/gpt-5", {
     prompt,
     messages: [],
@@ -133,13 +143,13 @@ export async function generateImageName(prompt: string): Promise<string> {
   const rawText = extractRawText(prediction.output);
 
   if (!rawText) {
-    throw new Error("Boş görsel adı üretildi");
+    throw new Error("Boş metin üretildi");
   }
 
-  const sanitized = sanitizeGeneratedText(rawText).replace(/["'`]/g, "");
+  const sanitized = sanitizeGeneratedText(rawText);
 
   if (sanitized.length === 0) {
-    throw new Error("Geçerli görsel adı elde edilemedi");
+    throw new Error("Geçerli metin elde edilemedi");
   }
 
   return sanitized;

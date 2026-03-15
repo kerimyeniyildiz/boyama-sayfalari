@@ -9,7 +9,11 @@ import { slugify } from "@/lib/slug";
 import { generateImageAssets, generatePdfFromImage, getBufferSize } from "@/lib/images";
 import { detectImageMimeTypeFromBuffer } from "@/lib/image-sniff";
 import { uploadToR2, deleteFromR2 } from "@/lib/r2";
-import { generateImageBuffer, generateImageName } from "@/lib/ai/replicate";
+import {
+  generateImageBuffer,
+  generateImageName,
+  generateTextWithReplicate
+} from "@/lib/ai/replicate";
 import { buildColoringPagePath } from "@/lib/page-paths";
 import { resolvePublicationState } from "@/lib/publishing";
 import {
@@ -108,6 +112,17 @@ function toRichText(value: FormDataEntryValue | null): string {
   return typeof value === "string" ? value : "";
 }
 
+function randomInt(min: number, max: number) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function parsePromptLines(value: string): string[] {
+  return value
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+}
+
 function normalizeWhitespace(value: string) {
   // Türkçe karakterleri koruyarak whitespace normalizasyonu yap
   return value
@@ -134,6 +149,10 @@ function toTitleCaseTr(value: string) {
       return `${first.toLocaleUpperCase("tr-TR")}${restJoined.toLocaleLowerCase("tr-TR")}`;
     })
     .join(" ");
+}
+
+function buildTopicFromAnchor(anchor: string) {
+  return toTitleCaseTr(normalizeWhitespace(anchor));
 }
 
 function hasWordCharacters(value: string) {
@@ -255,6 +274,61 @@ async function createSourcesFromPrompts(prompts: string[]): Promise<ImageSource[
   return sources;
 }
 
+async function generateAutoMetaDescription(topic: string, pageCount: number) {
+  const prompt = `Write an SEO-optimized meta description in Turkish for a coloring pages website category.
+
+Topic: ${topic}
+Total pages: ${pageCount}
+
+Rules:
+- 140-160 characters
+- Mention that the coloring pages are free
+- Mention PDF download
+- Mention printing (yazdır)
+- Encourage users to click
+- Use natural Turkish but include the keyword "${topic} boyama sayfaları"
+
+SEO phrases to include naturally:
+- "${topic} boyama sayfaları"
+- "PDF indir"
+- "yazdır"
+- "ücretsiz"
+
+Output only the meta description sentence.`;
+
+  const generated = await generateTextWithReplicate(prompt);
+  return generated;
+}
+
+async function generateAutoSeoParagraph(topic: string) {
+  const prompt = `Write ONE SEO-focused paragraph in Turkish for a coloring pages website category.
+
+Topic: ${topic}
+
+Requirements:
+- 90-130 words
+- Only ONE paragraph
+- Encourage users to download and print
+- Mention that the coloring pages are available as PDF
+- Target children, parents, and teachers
+- Use simple Turkish
+
+SEO requirements:
+- Repeat the keyword "${topic} boyama sayfaları" multiple times naturally
+- Also include these phrases:
+  - "${topic} boyama sayfaları PDF"
+  - "${topic} boyama sayfaları indir"
+  - "${topic} boyama sayfaları yazdır"
+  - "çocuklar için ${topic} boyama sayfaları"
+
+The paragraph should be SEO-optimized and include light keyword repetition but still read naturally.
+
+Output only the paragraph.`;
+
+  const generated = await generateTextWithReplicate(prompt);
+  return generated;
+}
+
 async function ensureUniqueSlug(baseSlug: string, used: Set<string>) {
   let candidate = baseSlug.length > 0 ? baseSlug : slugifyTr(Date.now().toString());
   let counter = 2;
@@ -373,8 +447,9 @@ export async function POST(request: Request) {
   const extraImageFiles = formData
     .getAll("images")
     .filter((value): value is File => value instanceof File && value.size > 0);
-  const promptFile = formData.get("promptFile");
-  const hasPromptFile = promptFile instanceof File && promptFile.size > 0;
+  const promptLinesRaw = toString(formData.get("promptLines"));
+  const promptLinesFromForm = parsePromptLines(promptLinesRaw);
+  const hasPromptLines = promptLinesFromForm.length > 0;
 
   const convertFileToSource = async (file: File, fallbackName: string): Promise<ImageSource> => {
     const arrayBuffer = await file.arrayBuffer();
@@ -402,11 +477,11 @@ export async function POST(request: Request) {
   const sources: ImageSource[] = [];
   let promptLines: string[] = [];
 
-  if (rawImageFile instanceof File && rawImageFile.size > 0 && !hasPromptFile) {
+  if (rawImageFile instanceof File && rawImageFile.size > 0 && !hasPromptLines) {
     sources.push(await convertFileToSource(rawImageFile, "ana-gorsel.jpg"));
   }
 
-  if (!hasPromptFile && extraImageFiles.length > 0) {
+  if (!hasPromptLines && extraImageFiles.length > 0) {
     const extraSources = await Promise.all(
       extraImageFiles.map((file, index) =>
         convertFileToSource(file, `ek-gorsel-${index + 1}.jpg`)
@@ -415,29 +490,12 @@ export async function POST(request: Request) {
     sources.push(...extraSources);
   }
 
-  if (hasPromptFile) {
-    const promptText = await promptFile.text();
-    const promptLinesRaw = promptText
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0);
-
-    if (promptLinesRaw.length === 0) {
-      return jsonError(
-        400,
-        "PROMPT_FILE_EMPTY",
-        "TXT dosyası boş görünüyor.",
-        {
-          promptFile: ["TXT dosyası en az bir satır içermelidir."]
-        }
-      );
-    }
-
-    promptLines = promptLinesRaw;
+  if (hasPromptLines) {
+    promptLines = promptLinesFromForm;
 
     let generatedSources: ImageSource[];
     try {
-      generatedSources = await createSourcesFromPrompts(promptLinesRaw);
+      generatedSources = await createSourcesFromPrompts(promptLinesFromForm);
     } catch (error) {
       return jsonError(
         500,
@@ -451,7 +509,7 @@ export async function POST(request: Request) {
 
   if (sources.length === 0) {
     return jsonError(400, "IMAGE_REQUIRED", "Görsel yüklenmedi.", {
-      image: ["TXT dosyası sağlamadıysanız en az bir görsel yüklemelisiniz."]
+      image: ["Prompt satırları girmediyseniz en az bir görsel yüklemelisiniz."]
     });
   }
 
@@ -483,12 +541,19 @@ export async function POST(request: Request) {
 
   const title = toString(formData.get("title"));
   const rawSlug = toString(formData.get("slug"));
-  const descriptionRaw = toString(formData.get("description"));
+  let descriptionRaw = toString(formData.get("description"));
   const submittedCategories = collectStrings(formData.getAll("categories"));
   const submittedTags = collectStrings(formData.getAll("tags"));
-  const seoContentRaw = toRichText(formData.get("seoContent"));
+  let seoContentRaw = toRichText(formData.get("seoContent"));
   const statusRaw = toString(formData.get("status"));
   const publishAtRaw = toString(formData.get("publishAt"));
+  const anchorRaw = toString(formData.get("anchor"));
+  const requestedPageCountRaw = toString(formData.get("pageCount"));
+  const requestedPageCount = Number.parseInt(requestedPageCountRaw, 10);
+  const pageCount =
+    Number.isFinite(requestedPageCount) && requestedPageCount >= 60 && requestedPageCount <= 120
+      ? requestedPageCount
+      : randomInt(60, 120);
 
   const statusParsed = statusSchema.safeParse(statusRaw || "DRAFT");
   if (!statusParsed.success) {
@@ -516,34 +581,62 @@ export async function POST(request: Request) {
   const fallbackSlug = deriveSlugFromSource(primaryImage);
   const normalizedTitleKey = trimmedTitle.length > 0 ? normalizeForComparison(trimmedTitle) : "";
   const normalizedFirstPrompt =
-    hasPromptFile && promptLines.length > 0
+    hasPromptLines && promptLines.length > 0
       ? normalizeForComparison(promptLines[0])
       : "";
 
+  const anchorTopic = anchorRaw.length > 0 ? buildTopicFromAnchor(anchorRaw) : "";
+  const hasAnchor = anchorTopic.length > 0;
+
+  if (hasAnchor) {
+    try {
+      descriptionRaw = await generateAutoMetaDescription(anchorTopic, pageCount);
+      seoContentRaw = await generateAutoSeoParagraph(anchorTopic);
+    } catch (error) {
+      return jsonError(
+        500,
+        "AUTO_TEXT_GENERATION_FAILED",
+        `SEO içerikleri üretilemedi: ${(error as Error).message}`
+      );
+    }
+  }
+
   let effectiveTitle = trimmedTitle;
-  if (
-    hasPromptFile &&
-    fallbackTitle.length >= 3 &&
-    (effectiveTitle.length < 3 ||
-      (normalizedFirstPrompt.length > 0 &&
-        normalizedTitleKey === normalizedFirstPrompt))
-  ) {
-    effectiveTitle = fallbackTitle;
+  if (hasAnchor) {
+    effectiveTitle = `${anchorTopic} Boyama Sayfaları | ${pageCount}+ Ücretsiz PDF`;
+  } else {
+    if (
+      hasPromptLines &&
+      fallbackTitle.length >= 3 &&
+      (effectiveTitle.length < 3 ||
+        (normalizedFirstPrompt.length > 0 &&
+          normalizedTitleKey === normalizedFirstPrompt))
+    ) {
+      effectiveTitle = fallbackTitle;
+    }
+
+    if (effectiveTitle.length < 3 && fallbackTitle.length >= 3) {
+      effectiveTitle = fallbackTitle;
+    }
+
+    if (effectiveTitle.length < 3 && fallbackSlug.length > 0) {
+      effectiveTitle = humanizeSlug(fallbackSlug);
+    }
+
+    if (effectiveTitle.length < 3) {
+      effectiveTitle = "Boyama Sayfası";
+    }
   }
 
-  if (effectiveTitle.length < 3 && fallbackTitle.length >= 3) {
-    effectiveTitle = fallbackTitle;
-  }
+  const generatedAnchorSlugBase = hasAnchor ? slugifyTr(anchorTopic) : "";
+  const generatedAnchorSlug =
+    hasAnchor && generatedAnchorSlugBase.length > 0
+      ? generatedAnchorSlugBase.endsWith("-boyama")
+        ? generatedAnchorSlugBase
+        : `${generatedAnchorSlugBase}-boyama`
+      : "";
 
-  if (effectiveTitle.length < 3 && fallbackSlug.length > 0) {
-    effectiveTitle = humanizeSlug(fallbackSlug);
-  }
-
-  if (effectiveTitle.length < 3) {
-    effectiveTitle = "Boyama Sayfası";
-  }
-
-  const slugSource = trimmedSlugInput.length > 0 ? trimmedSlugInput : effectiveTitle;
+  const slugSource = generatedAnchorSlug || (trimmedSlugInput.length > 0 ? trimmedSlugInput : effectiveTitle);
   let effectiveSlug = slugifyTr(slugSource);
   if (!effectiveSlug && fallbackSlug.length > 0) {
     effectiveSlug = fallbackSlug;
