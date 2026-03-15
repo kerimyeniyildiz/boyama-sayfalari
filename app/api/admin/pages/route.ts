@@ -127,6 +127,28 @@ function parsePromptLines(value: string): string[] {
     .filter((line) => line.length > 0);
 }
 
+function countWords(value: string) {
+  return value
+    .trim()
+    .split(/\s+/)
+    .filter((token) => token.length > 0).length;
+}
+
+function normalizeGeneratedParagraph(value: string) {
+  return value
+    .replace(/\s+/g, " ")
+    .replace(/[<>{}[\]]/g, "")
+    .trim();
+}
+
+function isParagraphComplete(value: string) {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return false;
+  }
+  return /[.!?…]$/.test(trimmed);
+}
+
 function normalizeWhitespace(value: string) {
   // Türkçe karakterleri koruyarak whitespace normalizasyonu yap
   return value
@@ -305,7 +327,7 @@ Output only the meta description sentence.`;
 }
 
 async function generateAutoSeoParagraph(topic: string) {
-  const prompt = `Write ONE SEO-focused paragraph in Turkish for a coloring pages website category.
+  const promptBase = `Write ONE SEO-focused paragraph in Turkish for a coloring pages website category.
 
 Topic: ${topic}
 
@@ -329,8 +351,29 @@ The paragraph should be SEO-optimized and include light keyword repetition but s
 
 Output only the paragraph.`;
 
-  const generated = await generateTextWithReplicate(prompt);
-  return generated;
+  const prompts = [
+    promptBase,
+    `${promptBase}
+
+Important:
+- The output must be a complete sentence paragraph and MUST end with a period.
+- Do not cut the paragraph.`
+  ];
+
+  let best = "";
+  for (const prompt of prompts) {
+    const generated = normalizeGeneratedParagraph(await generateTextWithReplicate(prompt));
+    const wordCount = countWords(generated);
+    const complete = isParagraphComplete(generated);
+    if (wordCount >= 90 && wordCount <= 130 && complete) {
+      return generated;
+    }
+    if (generated.length > best.length) {
+      best = generated;
+    }
+  }
+
+  return best;
 }
 
 async function ensureUniqueSlug(baseSlug: string, used: Set<string>) {

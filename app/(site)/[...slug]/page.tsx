@@ -92,7 +92,7 @@ export async function generateMetadata({ params }: PageProps) {
     metadataPage.title.trim().length > 0
       ? metadataPage.title.trim()
       : metadataPage.slug;
-  const title = `${baseTitle} Boyama Sayfaları - Yüksek Kalite PDF - (Ücretsiz)`;
+  const title = baseTitle;
   const manualDescription = metadataPage.description?.trim();
   const fallbackDescription = `En güzel ${baseTitle} boyama sayfalarını hemen indir! Ücretsiz, yazdırmaya uygun ve eğlenceli çizimlerimizi boyamaya başla.`;
   const description =

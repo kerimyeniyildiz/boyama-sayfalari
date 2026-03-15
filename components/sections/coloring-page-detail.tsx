@@ -126,6 +126,31 @@ function chunkArray<T>(items: T[], size: number): T[][] {
   return chunks;
 }
 
+function toTitleCaseFromSlug(value: string) {
+  return value
+    .split("-")
+    .filter((part) => part.length > 0)
+    .map((part) => `${part.charAt(0).toLocaleUpperCase("tr-TR")}${part.slice(1).toLocaleLowerCase("tr-TR")}`)
+    .join(" ");
+}
+
+function deriveAnchorLabel(page: ColoringPageDetail) {
+  const title = page.title.trim();
+  const match = title.match(/^(.*?)\s+Boyama Sayfaları\s*\|/i);
+  if (match?.[1]?.trim()) {
+    return match[1].trim();
+  }
+
+  if (page.slug.endsWith("-boyama")) {
+    const base = page.slug.slice(0, -"-boyama".length);
+    if (base.trim().length > 0) {
+      return toTitleCaseFromSlug(base);
+    }
+  }
+
+  return title;
+}
+
 const seoContentClassName =
   "space-y-3 text-brand-dark/75 [&_h1]:text-3xl [&_h1]:font-semibold [&_h1]:text-brand-dark [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:text-brand-dark [&_p]:leading-relaxed [&_strong]:font-semibold [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5";
 
@@ -156,6 +181,9 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
     : [];
   const shouldRenderExtraContent =
     filteredExtraEntries.length > 0 || (hasSeoContent && (seoSections.length > 0 || seoIntroHtml.length > 0));
+  const anchorLabel = deriveAnchorLabel(page);
+  const heroTitle = `${anchorLabel} Boyama Sayfaları`;
+  const preCardsHeading = `${anchorLabel} Boyama Sayfaları PDF İndir :`;
 
   return (
     <section className="container py-12">
@@ -176,7 +204,7 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
         <div className="flex flex-col justify-between gap-8 rounded-3xl border border-brand-dark/10 bg-white/90 p-8 shadow-card">
           <div className="space-y-4">
             <h1 className="text-3xl font-semibold text-brand-dark">
-              {page.title} Boyama Sayfaları
+              {heroTitle}
             </h1>
             <div className="space-y-3 text-brand-dark/70">
               <p>{page.description}</p>
@@ -261,9 +289,10 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
             />
           ) : null}
           {filteredExtraEntries.length > 0 ? (
-            <p className="text-2xl font-semibold text-brand-dark">
-              Boyama sayfalarını keşfet:
-            </p>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-semibold text-brand-dark">{preCardsHeading}</h2>
+              <p className="text-lg font-semibold text-brand-dark">Boyama sayfalarını keşfet:</p>
+            </div>
           ) : null}
           <div className="space-y-10">
             {cardGroups.map((group, groupIndex) => {
