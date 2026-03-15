@@ -141,13 +141,15 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
 
   const handleSubmit = form.handleSubmit((values) => {
     const formData = new FormData();
+    const publishAtValue =
+      typeof values.publishAt === "string" ? values.publishAt.trim() : "";
 
     formData.append("title", values.title);
     formData.append("slug", values.slug);
     formData.append("description", values.description.trim());
     formData.append("seoContent", values.seoContent ?? "");
     formData.append("status", values.status);
-    formData.append("publishAt", values.publishAt.trim());
+    formData.append("publishAt", publishAtValue);
     formData.append("anchor", anchor.trim());
     formData.append("pageCount", String(pageCount));
     formData.append("promptLines", promptLines);
