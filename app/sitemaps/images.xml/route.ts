@@ -25,38 +25,72 @@ export async function GET(): Promise<Response> {
       orderBy: { updatedAt: "desc" }
     });
 
-    const entries: SitemapEntry[] = [];
+    const entriesByUrl = new Map<
+      string,
+      {
+        lastModified: Date;
+        priority: number;
+        images: Map<string, { url: string; title?: string }>;
+      }
+    >();
 
     pages.forEach((page) => {
       const path = buildColoringPagePath(page);
-      const images: NonNullable<SitemapEntry["images"]> = [];
+      const url = `${baseUrl}${path}`;
+      const current = entriesByUrl.get(url);
+      const images = current?.images ?? new Map<string, { url: string; title?: string }>();
 
       if (page.thumbWebpKey) {
-        images.push({
-          url: getPublicUrl(page.thumbWebpKey),
+        const imageUrl = getPublicUrl(page.thumbWebpKey);
+        images.set(imageUrl, {
+          url: imageUrl,
           title: page.title
         });
       }
 
       if (page.coverImageKey && page.coverImageKey !== page.thumbWebpKey) {
-        images.push({
-          url: getPublicUrl(page.coverImageKey),
+        const imageUrl = getPublicUrl(page.coverImageKey);
+        images.set(imageUrl, {
+          url: imageUrl,
           title: page.title
         });
       }
 
-      if (images.length === 0) {
+      if (images.size === 0) {
         return;
       }
 
-      entries.push({
-        url: `${baseUrl}${path}`,
-        lastModified: page.updatedAt,
-        changeFrequency: "weekly",
-        priority: page.parentId ? 0.5 : 0.8,
+      const nextLastModified =
+        current && current.lastModified > page.updatedAt
+          ? current.lastModified
+          : page.updatedAt;
+      const nextPriority =
+        current && current.priority > (page.parentId ? 0.5 : 0.8)
+          ? current.priority
+          : page.parentId
+            ? 0.5
+            : 0.8;
+
+      entriesByUrl.set(url, {
+        lastModified: nextLastModified,
+        priority: nextPriority,
         images
       });
     });
+
+    const entries: SitemapEntry[] = Array.from(entriesByUrl.entries())
+      .map(([url, entry]) => ({
+        url,
+        lastModified: entry.lastModified,
+        changeFrequency: "weekly" as const,
+        priority: entry.priority,
+        images: Array.from(entry.images.values())
+      }))
+      .sort((a, b) => {
+        const left = a.lastModified ? new Date(a.lastModified).getTime() : 0;
+        const right = b.lastModified ? new Date(b.lastModified).getTime() : 0;
+        return right - left;
+      });
 
     return buildSitemapResponse(entries);
   } catch (error) {
@@ -64,4 +98,3 @@ export async function GET(): Promise<Response> {
     return buildSitemapResponse([]);
   }
 }
-

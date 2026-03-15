@@ -1,17 +1,14 @@
+import { buildSitemapIndexResponse } from "@/lib/sitemap-index-response";
 import { getBaseUrl, getLatestContentUpdate } from "@/lib/sitemap-utils";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 86400;
 
-type SitemapIndexEntry = {
-  url: string;
-  lastModified: Date;
-};
-
-export default async function sitemap(): Promise<SitemapIndexEntry[]> {
+export async function GET(): Promise<Response> {
   const baseUrl = getBaseUrl();
   const lastModified = await getLatestContentUpdate();
-  return [
+
+  return buildSitemapIndexResponse([
     {
       url: `${baseUrl}/sitemaps/core.xml`,
       lastModified
@@ -32,5 +29,5 @@ export default async function sitemap(): Promise<SitemapIndexEntry[]> {
       url: `${baseUrl}/sitemaps/tags.xml`,
       lastModified
     }
-  ];
+  ]);
 }

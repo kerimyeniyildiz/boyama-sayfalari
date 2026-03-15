@@ -33,6 +33,35 @@ function resolveClientIp(request: Request): string {
   return request.headers.get("x-real-ip")?.trim() || "0.0.0.0";
 }
 
+async function verifyBootstrapCredentials(email: string, password: string) {
+  const adminEmail = env.ADMIN_EMAIL?.trim();
+  if (!adminEmail || email !== adminEmail) {
+    return { matched: false as const };
+  }
+
+  const adminPasswordHash = env.ADMIN_PASSWORD_HASH?.trim();
+  const adminPassword = env.ADMIN_PASSWORD;
+
+  if (adminPasswordHash) {
+    const hashMatches = await bcrypt.compare(password, adminPasswordHash);
+    if (hashMatches) {
+      return { matched: true as const, hashToPersist: adminPasswordHash };
+    }
+  }
+
+  if (adminPassword) {
+    const plainMatches = timingSafeStringEqual(password, adminPassword);
+    if (plainMatches) {
+      return {
+        matched: true as const,
+        hashToPersist: await bcrypt.hash(password, 12)
+      };
+    }
+  }
+
+  return { matched: false as const };
+}
+
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = loginSchema.safeParse(body);
@@ -64,46 +93,36 @@ export async function POST(request: Request) {
   }
 
   let admin = await prisma.adminUser.findUnique({ where: { email } });
+  const bootstrapResult = await verifyBootstrapCredentials(email, password);
 
-  const adminEmail = env.ADMIN_EMAIL;
-  const adminPasswordHash = env.ADMIN_PASSWORD_HASH;
-  const adminPassword = env.ADMIN_PASSWORD;
-
-  if (
-    !admin &&
-    adminEmail &&
-    email === adminEmail &&
-    (adminPasswordHash || adminPassword)
-  ) {
-    const hashMatches = adminPasswordHash
-      ? await bcrypt.compare(password, adminPasswordHash)
-      : false;
-    const plainMatches = adminPassword
-      ? timingSafeStringEqual(password, adminPassword)
-      : false;
-
-    if (hashMatches || plainMatches) {
-      const passwordHashToPersist = adminPasswordHash
-        ? adminPasswordHash
-        : await bcrypt.hash(password, 12);
-
+  if (!admin) {
+    if (bootstrapResult.matched) {
       admin = await prisma.adminUser.upsert({
         where: { email },
-        update: {},
-        create: { email, passwordHash: passwordHashToPersist }
+        update: { passwordHash: bootstrapResult.hashToPersist },
+        create: { email, passwordHash: bootstrapResult.hashToPersist }
       });
     }
   }
 
   if (!admin) {
-    await bcrypt.compare(password, adminPasswordHash ?? DUMMY_BCRYPT_HASH);
+    await bcrypt.compare(password, env.ADMIN_PASSWORD_HASH ?? DUMMY_BCRYPT_HASH);
     return NextResponse.json(
       { error: INVALID_CREDENTIALS_MESSAGE },
       { status: 401, headers: { "Cache-Control": "no-store" } }
     );
   }
 
-  const isValid = await bcrypt.compare(password, admin.passwordHash);
+  let isValid = await bcrypt.compare(password, admin.passwordHash);
+
+  if (!isValid && bootstrapResult.matched) {
+    admin = await prisma.adminUser.update({
+      where: { id: admin.id },
+      data: { passwordHash: bootstrapResult.hashToPersist }
+    });
+    isValid = true;
+  }
+
   if (!isValid) {
     return NextResponse.json(
       { error: INVALID_CREDENTIALS_MESSAGE },
