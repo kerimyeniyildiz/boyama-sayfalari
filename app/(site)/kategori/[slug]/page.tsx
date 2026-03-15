@@ -8,7 +8,7 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { CategoryCollection } from "@/components/sections/category-collection";
 import { paginationParamsSchema } from "@/lib/validation";
 
-export const revalidate = 3600;
+export const revalidate = 604800;
 
 type PageProps = {
   params: {

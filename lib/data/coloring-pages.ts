@@ -10,7 +10,7 @@ import {
 } from "@/lib/cache-tags";
 import { prisma } from "@/lib/db";
 
-const ONE_DAY_SECONDS = 60 * 60 * 24;
+const ONE_WEEK_SECONDS = 60 * 60 * 24 * 7;
 
 export type ColoringPageSummary = Prisma.ColoringPageGetPayload<{
   include: {
@@ -95,7 +95,7 @@ function cacheResult<T>(
   tags: string[] = []
 ) {
   return unstable_cache(fn, keyParts, {
-    revalidate: ONE_DAY_SECONDS,
+    revalidate: ONE_WEEK_SECONDS,
     tags
   })();
 }
