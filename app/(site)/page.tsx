@@ -18,8 +18,9 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata() {
   return buildMetadata({
-    title: "Boyama Sayfaları – Ücretsiz, Eğitici ve Eğlenceli Çizimler",
-    description: siteConfig.description,
+    title: "Boyama Sayfaları | 10000+ Ücretsiz PDF İndir ve Yazdır",
+    description:
+      "Çocuklar için ücretsiz boyama sayfalarını indirin. Hayvanlar, araçlar, prensesler ve daha birçok kategoride yazdırılabilir boyama sayfaları.",
     path: "/"
   });
 }

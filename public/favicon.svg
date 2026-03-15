@@ -1,14 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="12" fill="#B4E4D4" />
-  <text
-    x="32"
-    y="42"
-    text-anchor="middle"
-    font-family="Segoe UI, Arial, sans-serif"
-    font-size="34"
-    font-weight="700"
-    fill="#4A5568"
-  >
-    B
-  </text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Boyama Sayfalari">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#8FD8C6"/>
+      <stop offset="1" stop-color="#5FBBA2"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#g)"/>
+  <circle cx="256" cy="256" r="164" fill="#ffffff" opacity="0.95"/>
+  <path d="M175 300c0-55 36-94 89-94 46 0 79 25 79 67 0 31-18 49-46 58l49 69h-56l-41-61h-23v61h-51V300Zm51-6h31c22 0 35-10 35-27 0-16-12-26-34-26-21 0-32 10-32 27v26Z" fill="#2F4A61"/>
+  <circle cx="200" cy="168" r="18" fill="#2F4A61"/>
+  <circle cx="244" cy="146" r="14" fill="#2F4A61"/>
+  <circle cx="292" cy="146" r="14" fill="#2F4A61"/>
+  <circle cx="336" cy="168" r="18" fill="#2F4A61"/>
 </svg>

@@ -10,6 +10,15 @@ export async function GET(): Promise<Response> {
 
   try {
     const tags = await prisma.tag.findMany({
+      where: {
+        pages: {
+          some: {
+            page: {
+              status: "PUBLISHED"
+            }
+          }
+        }
+      },
       select: { slug: true, updatedAt: true },
       orderBy: { updatedAt: "desc" }
     });
@@ -27,4 +36,3 @@ export async function GET(): Promise<Response> {
     return buildSitemapResponse([]);
   }
 }
-
