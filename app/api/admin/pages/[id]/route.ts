@@ -87,18 +87,23 @@ function toRichText(value: FormDataEntryValue | null): string {
   return typeof value === "string" ? value : "";
 }
 
+function createAssetVersion() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 async function uploadPageAssets(
   imageBuffer: Buffer,
   slug: string,
   uploadedKeys: string[]
 ) {
+  const assetVersion = createAssetVersion();
   const pdfBuffer = await generatePdfFromImage(imageBuffer);
   const assets = await generateImageAssets(imageBuffer);
 
-  const pdfKey = `pdf/${slug}.pdf`;
-  const coverKey = `cover/${slug}.webp`;
-  const thumbLargeKey = `thumb/${slug}-800.webp`;
-  const thumbSmallKey = `thumb/${slug}-400.webp`;
+  const pdfKey = `pdf/${slug}-${assetVersion}.pdf`;
+  const coverKey = `cover/${slug}-${assetVersion}.webp`;
+  const thumbLargeKey = `thumb/${slug}-${assetVersion}-800.webp`;
+  const thumbSmallKey = `thumb/${slug}-${assetVersion}-400.webp`;
 
   await uploadToR2({
     key: pdfKey,

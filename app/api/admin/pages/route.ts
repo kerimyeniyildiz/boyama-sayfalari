@@ -127,6 +127,10 @@ function parsePromptLines(value: string): string[] {
     .filter((line) => line.length > 0);
 }
 
+function createAssetVersion() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 function countWords(value: string) {
   return value
     .trim()
@@ -373,7 +377,11 @@ Important:
     }
   }
 
-  return best;
+  if (best.length > 0 && isParagraphComplete(best)) {
+    return best;
+  }
+
+  return `${topic} boyama sayfaları ile çocuklar, ebeveynler ve öğretmenler için keyifli bir etkinlik zamanı başlar. ${topic} boyama sayfaları PDF formatında ücretsiz sunulur; ${topic} boyama sayfaları indir seçeneğiyle dosyaları hemen alabilir, ${topic} boyama sayfaları yazdır adımıyla dakikalar içinde baskıya hazır hale getirebilirsiniz. Özellikle çocuklar için ${topic} boyama sayfaları yaratıcılığı destekler, ince motor becerilerini güçlendirir ve eğitici bir deneyim sağlar. Siz de şimdi koleksiyonu inceleyin, uygun sayfayı seçin, PDF indirerek yazdırın ve boyamaya hemen başlayın.`;
 }
 
 async function ensureUniqueSlug(baseSlug: string, used: Set<string>) {
@@ -401,14 +409,15 @@ async function uploadPageAssets(
   slug: string,
   uploadedKeys: string[]
 ) {
+  const assetVersion = createAssetVersion();
   const imageBuffer = source.buffer;
   const pdfBuffer = await generatePdfFromImage(imageBuffer);
   const assets = await generateImageAssets(imageBuffer);
 
-  const pdfKey = `pdf/${slug}.pdf`;
-  const coverKey = `cover/${slug}.webp`;
-  const thumbLargeKey = `thumb/${slug}-800.webp`;
-  const thumbSmallKey = `thumb/${slug}-400.webp`;
+  const pdfKey = `pdf/${slug}-${assetVersion}.pdf`;
+  const coverKey = `cover/${slug}-${assetVersion}.webp`;
+  const thumbLargeKey = `thumb/${slug}-${assetVersion}-800.webp`;
+  const thumbSmallKey = `thumb/${slug}-${assetVersion}-400.webp`;
 
   await uploadToR2({
     key: pdfKey,

@@ -81,6 +81,10 @@ function humanizeSlug(slug: string) {
     .join(" ");
 }
 
+function createAssetVersion() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 async function ensureUniqueSlug(baseSlug: string, used: Set<string>) {
   const initial = baseSlug.length > 0 ? baseSlug : slugifyTr(Date.now().toString());
   let candidate = initial;
@@ -108,13 +112,14 @@ async function uploadPageAssets(
   slug: string,
   uploadedKeys: string[]
 ) {
+  const assetVersion = createAssetVersion();
   const pdfBuffer = await generatePdfFromImage(imageBuffer);
   const assets = await generateImageAssets(imageBuffer);
 
-  const pdfKey = `pdf/${slug}.pdf`;
-  const coverKey = `cover/${slug}.webp`;
-  const thumbLargeKey = `thumb/${slug}-800.webp`;
-  const thumbSmallKey = `thumb/${slug}-400.webp`;
+  const pdfKey = `pdf/${slug}-${assetVersion}.pdf`;
+  const coverKey = `cover/${slug}-${assetVersion}.webp`;
+  const thumbLargeKey = `thumb/${slug}-${assetVersion}-800.webp`;
+  const thumbSmallKey = `thumb/${slug}-${assetVersion}-400.webp`;
 
   await uploadToR2({
     key: pdfKey,
