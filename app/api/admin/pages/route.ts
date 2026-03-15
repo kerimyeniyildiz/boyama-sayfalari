@@ -270,7 +270,24 @@ async function createSourcesFromPrompts(prompts: string[]): Promise<ImageSource[
 
   for (let index = 0; index < prompts.length; index += 1) {
     const originalPrompt = prompts[index];
-    const namingPrompt = `${originalPrompt} << Bu bir görsel üretme promptu. Üretilen görsele üretme promptuna uygun noktalama işareti kullanmadan Türkçe kısa bir isim ver.`;
+    const namingPrompt = `Create one short Turkish title for this coloring page image.
+
+Rules:
+- Return only the title
+- No explanation
+- No extra text
+- No headings
+- No JSON
+- No punctuation
+- No quotation marks
+- No numbering
+- The title should sound natural for a coloring pages website
+- The title should be clear simple and SEO-friendly
+- Use common Turkish search phrasing
+- Maximum 6 words
+
+Image prompt:
+${originalPrompt}`;
 
     let rawName: string;
     try {
