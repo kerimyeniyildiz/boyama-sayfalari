@@ -138,14 +138,6 @@ function normalizeGeneratedParagraph(value: string) {
     .trim();
 }
 
-function isParagraphComplete(value: string) {
-  const trimmed = value.trim();
-  if (trimmed.length === 0) {
-    return false;
-  }
-  return /[.!?…]$/.test(trimmed);
-}
-
 function normalizeWhitespace(value: string) {
   // Türkçe karakterleri koruyarak whitespace normalizasyonu yap
   return value
@@ -324,12 +316,11 @@ Output only the meta description sentence.`;
 }
 
 async function generateAutoSeoParagraph(topic: string) {
-  const promptBase = `Write ONE SEO-focused paragraph in Turkish for a coloring pages website category.
+  const prompt = `Write ONE SEO-focused paragraph in Turkish for a coloring pages website category.
 
 Topic: ${topic}
 
 Requirements:
-- 90-130 words
 - Only ONE paragraph
 - Encourage users to download and print
 - Mention that the coloring pages are available as PDF
@@ -348,31 +339,10 @@ The paragraph should be SEO-optimized and include light keyword repetition but s
 
 Output only the paragraph.`;
 
-  const prompts = [
-    promptBase,
-    `${promptBase}
-
-Important:
-- The output must be a complete sentence paragraph and MUST end with a period.
-- Do not cut the paragraph.`
-  ];
-
-  let best = "";
-  for (const prompt of prompts) {
-    const generated = normalizeGeneratedParagraph(await generateTextWithReplicate(prompt));
-    const complete = isParagraphComplete(generated);
-    if (complete) {
-      return generated;
-    }
-    if (generated.length > best.length) {
-      best = generated;
-    }
+  const generated = normalizeGeneratedParagraph(await generateTextWithReplicate(prompt));
+  if (generated.length > 0) {
+    return generated;
   }
-
-  if (best.length > 0) {
-    return `${best.replace(/[,:;.!?…\s]+$/g, "").trim()}.`;
-  }
-
   throw new Error(`${topic} için SEO metni üretilemedi.`);
 }
 

@@ -138,7 +138,7 @@ export async function generateTextWithReplicate(prompt: string): Promise<string>
     temperature: 0.7,
     top_p: 0.95,
     thinking_level: "low",
-    max_output_tokens: 2048
+    max_output_tokens: 10000
   });
 
   const rawText = extractRawText(prediction.output);
