@@ -4,7 +4,7 @@ import { ZodError } from "zod";
 
 import { prisma } from "@/lib/db";
 import { sanitizeSeoContent } from "@/lib/html";
-import { pageMetadataSchema, statusSchema } from "@/lib/validation";
+import { pageMetadataSchema } from "@/lib/validation";
 import { slugify } from "@/lib/slug";
 import { generateImageAssets, generatePdfFromImage, getBufferSize } from "@/lib/images";
 import { detectImageMimeTypeFromBuffer } from "@/lib/image-sniff";
@@ -110,6 +110,10 @@ function collectStrings(values: FormDataEntryValue[]): string[] {
 
 function toRichText(value: FormDataEntryValue | null): string {
   return typeof value === "string" ? value : "";
+}
+
+function coerceStatus(value: string): "DRAFT" | "PUBLISHED" {
+  return value.trim().toUpperCase() === "PUBLISHED" ? "PUBLISHED" : "DRAFT";
 }
 
 function randomInt(min: number, max: number) {
@@ -555,15 +559,8 @@ export async function POST(request: Request) {
       ? requestedPageCount
       : randomInt(60, 120);
 
-  const statusParsed = statusSchema.safeParse(statusRaw || "DRAFT");
-  if (!statusParsed.success) {
-    return jsonError(400, "VALIDATION_ERROR", "Yayın durumu geçersiz.", {
-      status: ["Yayın durumu geçersiz."]
-    });
-  }
-
   const publicationState = resolvePublicationState({
-    requestedStatus: statusParsed.data,
+    requestedStatus: coerceStatus(statusRaw),
     publishAtRaw
   });
   if (!publicationState.ok) {

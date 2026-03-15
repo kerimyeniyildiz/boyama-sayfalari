@@ -148,7 +148,12 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
     formData.append("slug", values.slug);
     formData.append("description", values.description.trim());
     formData.append("seoContent", values.seoContent ?? "");
-    formData.append("status", values.status);
+    formData.append(
+      "status",
+      values.status === "PUBLISHED" || values.status === "DRAFT"
+        ? values.status
+        : "DRAFT"
+    );
     formData.append("publishAt", publishAtValue);
     formData.append("anchor", anchor.trim());
     formData.append("pageCount", String(pageCount));
