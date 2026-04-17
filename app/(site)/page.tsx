@@ -14,12 +14,14 @@ import { CategorySection } from "@/components/sections/category-section";
 import { LatestSection } from "@/components/sections/latest-section";
 import { TagCloud } from "@/components/sections/tag-cloud";
 
-// Anasayfa haftalık ISR. lib/data/coloring-pages `withBuildTimeFallback`
-// helper'ı build sırasında DB'ye ulaşılamazsa güvenli fallback döndürüyor,
-// runtime'da ise ilk istek taze verileri doldurur. Admin mutation'ları
-// `revalidatePath("/")` çağırdığı için içerik eklenince sayfa anında
-// yenilenir. Cloudflare önünde `s-maxage` sayesinde edge'te de cache'lenir.
-export const revalidate = 604800;
+// Anasayfa build-time prerender'a girmez; Dokploy Nixpacks build
+// container'ı DB'ye ulaşamadığı için prerender edilirse boş veriyle
+// cache'lenip saatlerce yanlış sürüm servis edilebiliyor. Runtime'da
+// ilk istekte taze veri ile SSR edilir; `lib/data/coloring-pages`
+// katmanındaki `unstable_cache` zaten 7 gün veri cache tutuyor,
+// dolayısıyla SSR maliyeti düşük. Cloudflare önünde
+// `next.config.mjs` başlıkları ile edge cache devreye giriyor.
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata() {
   return buildMetadata({

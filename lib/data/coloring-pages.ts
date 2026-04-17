@@ -12,35 +12,6 @@ import { prisma } from "@/lib/db";
 
 const ONE_WEEK_SECONDS = 60 * 60 * 24 * 7;
 
-const BUILD_PHASE = "phase-production-build";
-
-/**
- * Anasayfa gibi statik/ISR sayfalar build sırasında Next.js tarafından
- * prerender edilirken DB'ye ulaşamazsa (Dokploy Nixpacks build container
- * veritabanı container'ına erişemiyor) tüm deploy başarısız oluyordu.
- *
- * Bu helper yalnızca build fazında çalıştığında DB hatasını yakalayıp
- * güvenli bir fallback döner. Runtime'da hata olduğu gibi fırlar.
- * Hata unstable_cache'e kaydedilmediğinden, ilk gerçek istek taze
- * sorgu çalıştırır ve cache'i doldurur.
- */
-async function withBuildTimeFallback<T>(
-  producer: () => Promise<T>,
-  fallback: T
-): Promise<T> {
-  if (process.env.NEXT_PHASE !== BUILD_PHASE) {
-    return producer();
-  }
-
-  try {
-    return await producer();
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.warn(`[build] veri çekme başarısız, fallback kullanılıyor: ${message}`);
-    return fallback;
-  }
-}
-
 export type ColoringPageSummary = Prisma.ColoringPageGetPayload<{
   include: {
     categories: { include: { category: true } };
@@ -132,48 +103,40 @@ function cacheResult<T>(
 export async function getFeaturedPages(
   limit = 6
 ): Promise<ColoringPageSummary[]> {
-  return withBuildTimeFallback(
-    () =>
-      cacheResult<ColoringPageSummary[]>(
-        ["coloring-pages", "featured", String(limit)],
-        async () =>
-          prisma.coloringPage.findMany({
-            where: { status: PageStatus.PUBLISHED, parentId: null },
-            orderBy: [{ downloads: "desc" }, { createdAt: "desc" }],
-            take: limit,
-            include: {
-              categories: { include: { category: true } },
-              tags: { include: { tag: true } },
-              parent: { select: { slug: true } }
-            }
-          }),
-        [CACHE_TAGS.coloringPages, CACHE_TAGS.featured]
-      ),
-    []
+  return cacheResult<ColoringPageSummary[]>(
+    ["coloring-pages", "featured", String(limit)],
+    async () =>
+      prisma.coloringPage.findMany({
+        where: { status: PageStatus.PUBLISHED, parentId: null },
+        orderBy: [{ downloads: "desc" }, { createdAt: "desc" }],
+        take: limit,
+        include: {
+          categories: { include: { category: true } },
+          tags: { include: { tag: true } },
+          parent: { select: { slug: true } }
+        }
+      }),
+    [CACHE_TAGS.coloringPages, CACHE_TAGS.featured]
   );
 }
 
 export async function getRecentPages(
   limit = 12
 ): Promise<ColoringPageSummary[]> {
-  return withBuildTimeFallback(
-    () =>
-      cacheResult<ColoringPageSummary[]>(
-        ["coloring-pages", "recent", String(limit)],
-        async () =>
-          prisma.coloringPage.findMany({
-            where: { status: PageStatus.PUBLISHED, parentId: null },
-            orderBy: { createdAt: "desc" },
-            take: limit,
-            include: {
-              categories: { include: { category: true } },
-              tags: { include: { tag: true } },
-              parent: { select: { slug: true } }
-            }
-          }),
-        [CACHE_TAGS.coloringPages, CACHE_TAGS.recent]
-      ),
-    []
+  return cacheResult<ColoringPageSummary[]>(
+    ["coloring-pages", "recent", String(limit)],
+    async () =>
+      prisma.coloringPage.findMany({
+        where: { status: PageStatus.PUBLISHED, parentId: null },
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        include: {
+          categories: { include: { category: true } },
+          tags: { include: { tag: true } },
+          parent: { select: { slug: true } }
+        }
+      }),
+    [CACHE_TAGS.coloringPages, CACHE_TAGS.recent]
   );
 }
 
@@ -310,66 +273,47 @@ export async function getRelatedPages(
   ]);
 }
 
-type TaxonomyWithCount = {
-  id: string;
-  name: string;
-  slug: string;
-  count: number;
-};
-
-export async function getCategoriesWithCounts(): Promise<TaxonomyWithCount[]> {
-  return withBuildTimeFallback<TaxonomyWithCount[]>(
-    async () => {
-      const categories = await cacheResult(
-        ["categories-with-counts"],
-        async () =>
-          prisma.category.findMany({
-            include: {
-              _count: { select: { pages: true } }
-            },
-            orderBy: { name: "asc" }
-          }),
-        [CACHE_TAGS.categories]
-      );
-
-      return categories.map((category) => ({
-        id: category.id,
-        name: category.name,
-        slug: category.slug,
-        count: category._count.pages
-      }));
-    },
-    []
+export async function getCategoriesWithCounts() {
+  const categories = await cacheResult(
+    ["categories-with-counts"],
+    async () =>
+      prisma.category.findMany({
+        include: {
+          _count: { select: { pages: true } }
+        },
+        orderBy: { name: "asc" }
+      }),
+    [CACHE_TAGS.categories]
   );
+
+  return categories.map((category) => ({
+    id: category.id,
+    name: category.name,
+    slug: category.slug,
+    count: category._count.pages
+  }));
 }
 
-export async function getTagsWithCounts(
-  limit = 50
-): Promise<TaxonomyWithCount[]> {
-  return withBuildTimeFallback<TaxonomyWithCount[]>(
-    async () => {
-      const tags = await cacheResult(
-        ["tags-with-counts", String(limit)],
-        async () =>
-          prisma.tag.findMany({
-            include: {
-              _count: { select: { pages: true } }
-            },
-            orderBy: { name: "asc" },
-            take: limit
-          }),
-        [CACHE_TAGS.tags]
-      );
-
-      return tags.map((tag) => ({
-        id: tag.id,
-        name: tag.name,
-        slug: tag.slug,
-        count: tag._count.pages
-      }));
-    },
-    []
+export async function getTagsWithCounts(limit = 50) {
+  const tags = await cacheResult(
+    ["tags-with-counts", String(limit)],
+    async () =>
+      prisma.tag.findMany({
+        include: {
+          _count: { select: { pages: true } }
+        },
+        orderBy: { name: "asc" },
+        take: limit
+      }),
+    [CACHE_TAGS.tags]
   );
+
+  return tags.map((tag) => ({
+    id: tag.id,
+    name: tag.name,
+    slug: tag.slug,
+    count: tag._count.pages
+  }));
 }
 
 export async function getCategorySlugs() {
