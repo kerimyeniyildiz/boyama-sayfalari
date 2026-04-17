@@ -14,7 +14,11 @@ import { CategorySection } from "@/components/sections/category-section";
 import { LatestSection } from "@/components/sections/latest-section";
 import { TagCloud } from "@/components/sections/tag-cloud";
 
-export const revalidate = 604800;
+// Build sırasında DB'ye (Dokploy internal network) erişilemediği için
+// anasayfayı build-time prerender'dan çıkarıyoruz. Veri katmanı
+// (lib/data/coloring-pages) zaten `unstable_cache` ile 7 gün cache yapıyor,
+// dolayısıyla runtime performansı ISR'ye çok yakın kalıyor.
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata() {
   return buildMetadata({
