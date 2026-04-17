@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
@@ -16,6 +16,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+
+type JobStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+
+type JobProgress = {
+  status: JobStatus;
+  current: number;
+  total: number;
+  error?: string | null;
+};
+
+const JOB_POLL_INTERVAL_MS = 3000;
+const JOB_POLL_MAX_ATTEMPTS = 400; // ~20 dakika
 
 type PageFormValues = z.infer<typeof pageMetadataSchema> & {
   status: "DRAFT" | "PUBLISHED";
@@ -70,6 +82,91 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
   const [anchor, setAnchor] = useState("");
   const [promptLines, setPromptLines] = useState("");
   const [pageCount, setPageCount] = useState(() => Math.floor(Math.random() * 61) + 60);
+  const [jobProgress, setJobProgress] = useState<JobProgress | null>(null);
+  const pollStopRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    return () => {
+      pollStopRef.current?.();
+    };
+  }, []);
+
+  const pollJobStatus = (jobId: string, promptCount: number) => {
+    pollStopRef.current?.();
+    setJobProgress({ status: "PENDING", current: 0, total: promptCount });
+    let cancelled = false;
+    let attempts = 0;
+    const tick = async () => {
+      if (cancelled) return;
+      attempts += 1;
+      try {
+        const response = await fetch(`/api/admin/jobs/${jobId}`, {
+          cache: "no-store"
+        });
+        const json = await response.json().catch(() => null);
+        const data = json?.data as
+          | {
+              status: JobStatus;
+              progressCurrent: number;
+              progressTotal: number;
+              error?: string | null;
+            }
+          | undefined;
+
+        if (!data) {
+          throw new Error("İş durumu okunamadı.");
+        }
+
+        setJobProgress({
+          status: data.status,
+          current: data.progressCurrent,
+          total: data.progressTotal || promptCount,
+          error: data.error
+        });
+
+        if (data.status === "COMPLETED") {
+          toast.success("Boyama sayfaları oluşturuldu.");
+          pollStopRef.current?.();
+          router.push("/admin/pages");
+          router.refresh();
+          return;
+        }
+
+        if (data.status === "FAILED") {
+          const message =
+            data.error ?? "Üretim sırasında bilinmeyen bir hata oluştu.";
+          setFormError(message);
+          toast.error(message);
+          pollStopRef.current?.();
+          return;
+        }
+
+        if (attempts >= JOB_POLL_MAX_ATTEMPTS) {
+          setFormError(
+            "İş uzun süredir devam ediyor. Admin / Sayfalar ekranından takip edebilirsiniz."
+          );
+          pollStopRef.current?.();
+          return;
+        }
+      } catch (error) {
+        console.error("İş durumu alınamadı", error);
+      }
+    };
+
+    const interval = setInterval(tick, JOB_POLL_INTERVAL_MS);
+    // hemen bir kez dene
+    void tick();
+
+    const stop = () => {
+      cancelled = true;
+      clearInterval(interval);
+      if (pollStopRef.current === stop) {
+        pollStopRef.current = null;
+      }
+    };
+
+    pollStopRef.current = stop;
+  };
 
   const toDateTimeLocalInput = (value: string | null | undefined) => {
     if (!value) {
@@ -220,6 +317,18 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
           return;
         }
 
+        if (typeof data?.jobId === "string" && data.jobId.length > 0) {
+          const promptCount =
+            typeof data.promptCount === "number" && data.promptCount > 0
+              ? data.promptCount
+              : promptLines
+                  .split(/\r?\n/)
+                  .filter((line) => line.trim().length > 0).length;
+          toast.message("Boyama sayfaları arka planda üretiliyor...");
+          pollJobStatus(data.jobId, promptCount);
+          return;
+        }
+
         toast.success("Boyama sayfası kaydedildi.");
         router.push("/admin/pages");
         router.refresh();
@@ -240,6 +349,41 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
       {formError ? (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {formError}
+        </div>
+      ) : null}
+
+      {jobProgress ? (
+        <div className="space-y-2 rounded-xl border border-brand-dark/10 bg-brand-light/60 px-4 py-3 text-sm text-brand-dark">
+          <div className="flex items-center justify-between">
+            <span className="font-medium">
+              {jobProgress.status === "COMPLETED"
+                ? "Üretim tamamlandı, yönlendiriliyorsunuz..."
+                : jobProgress.status === "FAILED"
+                  ? "Üretim başarısız oldu"
+                  : "Görseller üretiliyor"}
+            </span>
+            <span className="text-xs text-brand-dark/60">
+              {jobProgress.current} / {jobProgress.total || "?"}
+            </span>
+          </div>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-white">
+            <div
+              className="h-full rounded-full bg-brand-dark transition-all"
+              style={{
+                width: jobProgress.total
+                  ? `${Math.min(100, Math.round((jobProgress.current / jobProgress.total) * 100))}%`
+                  : "0%"
+              }}
+            />
+          </div>
+          {jobProgress.error ? (
+            <p className="text-xs text-red-600">{jobProgress.error}</p>
+          ) : (
+            <p className="text-xs text-brand-dark/60">
+              Bu sekmeyi açık tutabilirsiniz. İş arka planda çalışmaya devam eder;
+              kapansa bile Admin / Sayfalar ekranından takip edebilirsiniz.
+            </p>
+          )}
         </div>
       ) : null}
 

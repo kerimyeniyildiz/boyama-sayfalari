@@ -36,6 +36,20 @@
       "migration_name": "0005_add_seo_content",
       "logs": [],
       "started_at": null
+    },
+    {
+      "checksum": "",
+      "finished_at": null,
+      "migration_name": "0006_add_publish_at",
+      "logs": [],
+      "started_at": null
+    },
+    {
+      "checksum": "",
+      "finished_at": null,
+      "migration_name": "0007_generation_jobs",
+      "logs": [],
+      "started_at": null
     }
   ]
 }

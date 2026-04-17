@@ -4,17 +4,16 @@ import { ZodError } from "zod";
 
 import { prisma } from "@/lib/db";
 import { enforceAdminMutationLimit } from "@/lib/admin-rate-limit";
+import { getSessionFromCookies } from "@/lib/auth";
 import { sanitizeSeoContent } from "@/lib/html";
 import { pageMetadataSchema } from "@/lib/validation";
+import { aiBatchJobPayloadSchema } from "@/lib/jobs/schema";
+import { startAiBatchJobInBackground } from "@/lib/jobs/ai-batch-worker";
 import { slugify } from "@/lib/slug";
 import { generateImageAssets, generatePdfFromImage, getBufferSize } from "@/lib/images";
 import { detectImageMimeTypeFromBuffer } from "@/lib/image-sniff";
 import { uploadToR2, deleteFromR2 } from "@/lib/r2";
-import {
-  generateImageBuffer,
-  generateImageName,
-  generateTextWithReplicate
-} from "@/lib/ai/replicate";
+import { generateTextWithReplicate } from "@/lib/ai/replicate";
 import { buildColoringPagePath } from "@/lib/page-paths";
 import { resolvePublicationState } from "@/lib/publishing";
 import {
@@ -214,13 +213,6 @@ function hasWordCharacters(value: string) {
   return /\p{L}/u.test(value);
 }
 
-function normalizeForComparison(value: string) {
-  return value
-    .normalize("NFC")
-    .toLocaleLowerCase("tr-TR")
-    .replace(/[^a-z0-9çğıöşü]/g, "");
-}
-
 function buildLabelAndSlugHint(rawName: string, fallback: string) {
   const cleanedRaw = sanitizeAiGeneratedLabel(rawName);
   const cleanedFallback = deriveLabelFromPrompt(fallback);
@@ -262,77 +254,6 @@ function humanizeSlug(slug: string) {
       return `${first}${rest}`;
     })
     .join(" ");
-}
-
-async function createSourcesFromPrompts(prompts: string[]): Promise<ImageSource[]> {
-  const sources: ImageSource[] = [];
-  const usedNames = new Set<string>();
-
-  for (let index = 0; index < prompts.length; index += 1) {
-    const originalPrompt = prompts[index];
-    const namingPrompt = `Create one short Turkish title for this coloring page image.
-
-Rules:
-- Return only the title
-- No explanation
-- No extra text
-- No headings
-- No JSON
-- No punctuation
-- No quotation marks
-- No numbering
-- The title should sound natural for a coloring pages website
-- The title should be clear simple and SEO-friendly
-- Use common Turkish search phrasing
-- Maximum 6 words
-
-Image prompt:
-${originalPrompt}`;
-
-    let rawName: string;
-    try {
-      rawName = await generateImageName(namingPrompt);
-    } catch (error) {
-      throw new Error(`Görsel adı üretilemedi (satır ${index + 1}): ${(error as Error).message}`);
-    }
-
-    const fallbackName = `gorsel-${index + 1}`;
-    const promptFallback = hasWordCharacters(originalPrompt)
-      ? originalPrompt
-      : fallbackName;
-    const labelInfo = buildLabelAndSlugHint(rawName, promptFallback);
-    const label = labelInfo.label.trim();
-    const slugHint = labelInfo.slugHint.trim();
-    const baseName = label.length > 0 ? label : fallbackName;
-    let uniqueName = baseName;
-    let counter = 2;
-    while (usedNames.has(uniqueName)) {
-      uniqueName = `${baseName}-${counter}`;
-      counter += 1;
-    }
-    usedNames.add(uniqueName);
-
-    let imageBuffer: Buffer;
-    try {
-      const result = await generateImageBuffer(originalPrompt);
-      imageBuffer = result.buffer;
-    } catch (error) {
-      throw new Error(`Görsel üretimi başarısız oldu (satır ${index + 1}): ${(error as Error).message}`);
-    }
-
-    const detectedMimeType = detectImageMimeTypeFromBuffer(imageBuffer);
-
-    sources.push({
-      name: `${uniqueName}.jpg`,
-      buffer: imageBuffer,
-      mimeType: detectedMimeType ?? "application/octet-stream",
-      mimeTrusted: detectedMimeType !== null,
-      label: label.length > 0 ? label : toTitleCaseTr(fallbackName),
-      slugHint: slugHint.length > 0 ? slugHint : fallbackName
-    });
-  }
-
-  return sources;
 }
 
 async function generateAutoMetaDescription(topic: string, pageCount: number) {
@@ -543,37 +464,89 @@ export async function POST(request: Request) {
     };
   };
 
-  const sources: ImageSource[] = [];
-  let promptLines: string[] = [];
+  if (hasPromptLines) {
+    // AI prompt tabanlı toplu üretim uzun sürüyor (onlarca saniye).
+    // Request'i bloklamamak için bir GenerationJob oluşturup arka planda
+    // çalıştırıyoruz. İstemci jobId üzerinden durumu poll'layabilir.
+    const statusRawForJob = toString(formData.get("status"));
+    const publishAtRawForJob = toString(formData.get("publishAt"));
+    const anchorRawForJob = toString(formData.get("anchor"));
+    const requestedPageCountRawForJob = toString(formData.get("pageCount"));
+    const requestedPageCountForJob = Number.parseInt(
+      requestedPageCountRawForJob,
+      10
+    );
+    const pageCountForJob =
+      Number.isFinite(requestedPageCountForJob) &&
+      requestedPageCountForJob >= 60 &&
+      requestedPageCountForJob <= 120
+        ? requestedPageCountForJob
+        : randomInt(60, 120);
 
-  if (rawImageFile instanceof File && rawImageFile.size > 0 && !hasPromptLines) {
+    const payloadInput = {
+      promptLines: promptLinesFromForm,
+      anchor: anchorRawForJob,
+      title: toString(formData.get("title")),
+      slug: toString(formData.get("slug")),
+      description: toString(formData.get("description")),
+      seoContent: toRichText(formData.get("seoContent")),
+      categories: collectStrings(formData.getAll("categories")),
+      tags: collectStrings(formData.getAll("tags")),
+      pageCount: pageCountForJob,
+      status: coerceStatus(statusRawForJob),
+      publishAtRaw: publishAtRawForJob
+    };
+
+    const payloadParsed = aiBatchJobPayloadSchema.safeParse(payloadInput);
+    if (!payloadParsed.success) {
+      const fieldErrors = normalizeFieldErrors(
+        payloadParsed.error.flatten().fieldErrors
+      );
+      return jsonError(
+        400,
+        "INVALID_PROMPT_PAYLOAD",
+        "Prompt tabanlı üretim için alanlar hatalı.",
+        fieldErrors
+      );
+    }
+
+    const session = getSessionFromCookies();
+    const job = await prisma.generationJob.create({
+      data: {
+        type: "AI_COLORING_PAGES_BATCH",
+        status: "PENDING",
+        payload: payloadParsed.data,
+        progressTotal: payloadParsed.data.promptLines.length,
+        createdBy: session?.email ?? null
+      },
+      select: { id: true }
+    });
+
+    startAiBatchJobInBackground(job.id);
+
+    return NextResponse.json(
+      {
+        success: true,
+        jobId: job.id,
+        promptCount: payloadParsed.data.promptLines.length
+      },
+      { status: 202, headers: { "Cache-Control": "no-store" } }
+    );
+  }
+
+  const sources: ImageSource[] = [];
+
+  if (rawImageFile instanceof File && rawImageFile.size > 0) {
     sources.push(await convertFileToSource(rawImageFile, "ana-gorsel.jpg"));
   }
 
-  if (!hasPromptLines && extraImageFiles.length > 0) {
+  if (extraImageFiles.length > 0) {
     const extraSources = await Promise.all(
       extraImageFiles.map((file, index) =>
         convertFileToSource(file, `ek-gorsel-${index + 1}.jpg`)
       )
     );
     sources.push(...extraSources);
-  }
-
-  if (hasPromptLines) {
-    promptLines = promptLinesFromForm;
-
-    let generatedSources: ImageSource[];
-    try {
-      generatedSources = await createSourcesFromPrompts(promptLinesFromForm);
-    } catch (error) {
-      return jsonError(
-        500,
-        "PROMPT_IMAGE_GENERATION_FAILED",
-        (error as Error).message
-      );
-    }
-
-    sources.push(...generatedSources);
   }
 
   if (sources.length === 0) {
@@ -641,11 +614,6 @@ export async function POST(request: Request) {
   const trimmedSlugInput = rawSlug.trim();
   const fallbackTitle = primaryImage.label?.trim() ?? "";
   const fallbackSlug = deriveSlugFromSource(primaryImage);
-  const normalizedTitleKey = trimmedTitle.length > 0 ? normalizeForComparison(trimmedTitle) : "";
-  const normalizedFirstPrompt =
-    hasPromptLines && promptLines.length > 0
-      ? normalizeForComparison(promptLines[0])
-      : "";
 
   const anchorTopic = anchorRaw.length > 0 ? buildTopicFromAnchor(anchorRaw) : "";
   const hasAnchor = anchorTopic.length > 0;
@@ -667,16 +635,6 @@ export async function POST(request: Request) {
   if (hasAnchor) {
     effectiveTitle = `${anchorTopic} Boyama Sayfaları | ${pageCount}+ Ücretsiz PDF`;
   } else {
-    if (
-      hasPromptLines &&
-      fallbackTitle.length >= 3 &&
-      (effectiveTitle.length < 3 ||
-        (normalizedFirstPrompt.length > 0 &&
-          normalizedTitleKey === normalizedFirstPrompt))
-    ) {
-      effectiveTitle = fallbackTitle;
-    }
-
     if (effectiveTitle.length < 3 && fallbackTitle.length >= 3) {
       effectiveTitle = fallbackTitle;
     }

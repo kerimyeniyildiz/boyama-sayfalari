@@ -114,3 +114,33 @@ enum PageStatus {
   DRAFT
   PUBLISHED
 }
+
+model GenerationJob {
+  id          String              @id @default(cuid())
+  type        GenerationJobType
+  status      GenerationJobStatus @default(PENDING)
+  progressCurrent Int             @default(0)
+  progressTotal   Int             @default(0)
+  payload     Json
+  result      Json?
+  error       String?
+  createdBy   String?
+  attempts    Int                 @default(0)
+  createdAt   DateTime            @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+  updatedAt   DateTime            @updatedAt
+
+  @@index([status, createdAt])
+}
+
+enum GenerationJobType {
+  AI_COLORING_PAGES_BATCH
+}
+
+enum GenerationJobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
