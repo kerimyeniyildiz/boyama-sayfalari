@@ -90,6 +90,28 @@ export function buildWebSiteJsonLd() {
   };
 }
 
+export type BreadcrumbItem = {
+  name: string;
+  url: string;
+};
+
+/**
+ * Google'ın rich result için beklediği BreadcrumbList JSON-LD yapısını oluşturur.
+ * Verilen öğeler listede göründüğü sırayla `position` alır (1 tabanlı).
+ */
+export function buildBreadcrumbJsonLd(items: BreadcrumbItem[]) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: items.map((item, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: item.name,
+      item: item.url
+    }))
+  };
+}
+
 export function buildCollectionJsonLd(options: {
   name: string;
   description: string;

@@ -5,6 +5,7 @@ import { FileDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { ColoringPageDetail } from "@/lib/data/coloring-pages";
+import { buildColoringPageAlt } from "@/lib/image-alt";
 import { FALLBACK_BLUR_DATA_URL } from "@/lib/placeholders";
 import { getPublicUrl } from "@/lib/r2";
 import { sanitizeSeoContent } from "@/lib/html";
@@ -192,7 +193,7 @@ export function ColoringPageDetail({ page }: { page: ColoringPageDetail }) {
         <div className="relative aspect-[3/4] overflow-hidden rounded-3xl border border-brand-dark/10 bg-white shadow-card">
           <Image
             src={large}
-            alt={page.title}
+            alt={buildColoringPageAlt(page.title)}
             fill
             sizes="(max-width: 1024px) 100vw, 60vw"
             className="object-contain"

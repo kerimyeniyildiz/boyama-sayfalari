@@ -7,6 +7,7 @@ import { ArrowDownToLine, FileDown, X } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { buildColoringPageAlt } from "@/lib/image-alt";
 
 type ColoringPageCardProps = {
   slug: string;
@@ -26,6 +27,7 @@ export function ColoringPageCard({
   optimized
 }: ColoringPageCardProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const altText = buildColoringPageAlt(title);
 
   const openLightbox = () => {
     setLightboxOpen(true);
@@ -44,7 +46,7 @@ export function ColoringPageCard({
         >
           <Image
             src={imageSrc}
-            alt={title}
+            alt={altText}
             fill
             sizes="(max-width: 768px) 100vw, 33vw"
             className="object-contain"
@@ -90,7 +92,7 @@ export function ColoringPageCard({
             <div className="relative mx-auto aspect-[3/4] w-full max-h-[85vh] overflow-hidden rounded-lg bg-white">
               <Image
                 src={lightboxSrc}
-                alt={title}
+                alt={altText}
                 fill
                 sizes="(max-width: 768px) 100vw, 70vw"
                 className="object-contain"

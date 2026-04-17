@@ -5,6 +5,7 @@ import { buildCollectionJsonLd, buildMetadata, siteConfig } from "@/lib/seo";
 import { getPublicUrl } from "@/lib/r2";
 import { buildColoringPageUrl } from "@/lib/page-paths";
 import { JsonLd } from "@/components/seo/json-ld";
+import { Breadcrumbs } from "@/components/sections/breadcrumbs";
 import { TagCollection } from "@/components/sections/tag-collection";
 import { paginationParamsSchema } from "@/lib/validation";
 
@@ -69,6 +70,12 @@ export default async function TagPage({ params, searchParams }: PageProps) {
 
   return (
     <>
+      <Breadcrumbs
+        items={[
+          { name: "Etiketler" },
+          { name: tagData.tag.name }
+        ]}
+      />
       <TagCollection
         tag={{
           ...tagData.tag,

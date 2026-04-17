@@ -1,9 +1,11 @@
 import { notFound, redirect } from "next/navigation";
 
 import { getColoringPageBySlug } from "@/lib/data/coloring-pages";
+import { buildColoringPageAlt } from "@/lib/image-alt";
 import { getPublicUrl } from "@/lib/r2";
 import { buildCreativeWorkJsonLd, buildMetadata, siteConfig } from "@/lib/seo";
 import { JsonLd } from "@/components/seo/json-ld";
+import { Breadcrumbs, type BreadcrumbEntry } from "@/components/sections/breadcrumbs";
 import { ColoringPageDetail } from "@/components/sections/coloring-page-detail";
 import { buildColoringPagePath, buildColoringPageUrl } from "@/lib/page-paths";
 
@@ -108,7 +110,7 @@ export async function generateMetadata({ params }: PageProps) {
       url: imageUrl,
       width: metadataPage.width ?? undefined,
       height: metadataPage.height ?? undefined,
-      alt: metadataPage.title
+      alt: buildColoringPageAlt(metadataPage.title)
     },
     type: "article",
     publishedTime: createdAt?.toISOString(),
@@ -248,8 +250,25 @@ export default async function ColoringPageRoute({ params }: PageProps) {
     citation
   });
 
+  const breadcrumbItems: BreadcrumbEntry[] = [];
+  const primaryCategory = page.categories[0]?.category;
+  if (primaryCategory) {
+    breadcrumbItems.push({
+      name: primaryCategory.name,
+      href: `/kategori/${primaryCategory.slug}`
+    });
+  }
+  if (page.parent?.slug) {
+    breadcrumbItems.push({
+      name: page.parent.title,
+      href: buildColoringPagePath({ slug: page.parent.slug, parentSlug: null })
+    });
+  }
+  breadcrumbItems.push({ name: page.title });
+
   return (
     <>
+      <Breadcrumbs items={breadcrumbItems} />
       <ColoringPageDetail page={page} />
       <JsonLd data={jsonLd} />
     </>

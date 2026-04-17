@@ -5,6 +5,7 @@ import type { Route } from "next";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { FALLBACK_BLUR_DATA_URL } from "@/lib/placeholders";
+import { buildColoringPageAlt } from "@/lib/image-alt";
 import { buildColoringPagePath } from "@/lib/page-paths";
 import { getPublicUrl } from "@/lib/r2";
 import { cn } from "@/lib/utils";
@@ -51,7 +52,7 @@ export function ColoringPageCard({
         <Link href={pageHref}>
           <Image
             src={large}
-            alt={page.title}
+            alt={buildColoringPageAlt(page.title)}
             fill
             sizes="(max-width: 768px) 100vw, 33vw"
             className="object-contain object-center transition-transform duration-500 hover:scale-105"

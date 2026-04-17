@@ -5,6 +5,7 @@ import { buildCollectionJsonLd, buildMetadata, siteConfig } from "@/lib/seo";
 import { getPublicUrl } from "@/lib/r2";
 import { buildColoringPageUrl } from "@/lib/page-paths";
 import { JsonLd } from "@/components/seo/json-ld";
+import { Breadcrumbs } from "@/components/sections/breadcrumbs";
 import { CategoryCollection } from "@/components/sections/category-collection";
 import { paginationParamsSchema } from "@/lib/validation";
 
@@ -68,6 +69,12 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
 
   return (
     <>
+      <Breadcrumbs
+        items={[
+          { name: "Kategoriler" },
+          { name: categoryData.category.name }
+        ]}
+      />
       <CategoryCollection
         category={{
           ...categoryData.category,
