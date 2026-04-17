@@ -27,20 +27,112 @@ async function sleep(ms: number) {
   });
 }
 
+const MAX_THROTTLE_RETRIES = 5;
+const DEFAULT_RETRY_AFTER_SECONDS = 10;
+const RETRY_JITTER_MS = 500;
+
+/**
+ * Replicate'in 429 (Request was throttled) yanıtında döndürdüğü
+ * `Retry-After` header'ını veya gövdedeki `retry_after` alanını
+ * saniye cinsinden çözer. Bilinmeyen format için güvenli bir
+ * varsayılana düşer.
+ */
+function parseRetryAfterSeconds(
+  response: Response,
+  body: string
+): number {
+  const header = response.headers.get("retry-after");
+  if (header) {
+    const asNumber = Number(header);
+    if (Number.isFinite(asNumber) && asNumber >= 0) {
+      return asNumber;
+    }
+    const asDate = Date.parse(header);
+    if (Number.isFinite(asDate)) {
+      const diff = Math.ceil((asDate - Date.now()) / 1000);
+      if (diff > 0) {
+        return diff;
+      }
+    }
+  }
+
+  try {
+    const parsed = JSON.parse(body) as { retry_after?: unknown };
+    const fromBody = parsed?.retry_after;
+    if (typeof fromBody === "number" && Number.isFinite(fromBody) && fromBody >= 0) {
+      return fromBody;
+    }
+    if (typeof fromBody === "string") {
+      const asNumber = Number(fromBody);
+      if (Number.isFinite(asNumber) && asNumber >= 0) {
+        return asNumber;
+      }
+    }
+  } catch {
+    // gövde JSON değil; varsayılana düşeriz
+  }
+
+  return DEFAULT_RETRY_AFTER_SECONDS;
+}
+
+type ReplicateFetchOptions = {
+  /** 429 sonrası kaç kez otomatik yeniden denensin. */
+  maxRetries?: number;
+  /** Loglama için çağrı kaynağı. */
+  label?: string;
+};
+
+/**
+ * Replicate isteklerini 429 (throttle) aldığında otomatik olarak
+ * Retry-After kadar bekleyerek yeniden dener. Diğer başarısız
+ * durumlarda hemen hata fırlatır.
+ */
+async function fetchReplicateWithThrottleRetry(
+  url: string,
+  init: RequestInit,
+  { maxRetries = MAX_THROTTLE_RETRIES, label = "Replicate request" }: ReplicateFetchOptions = {}
+): Promise<Response> {
+  for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+    const response = await fetch(url, init);
+    if (response.status !== 429) {
+      return response;
+    }
+
+    if (attempt === maxRetries) {
+      const body = await response.text();
+      throw new Error(`${label} failed (429): ${body}`);
+    }
+
+    const body = await response.clone().text();
+    const retryAfterSeconds = parseRetryAfterSeconds(response, body);
+    console.warn(
+      `Replicate throttled (${label}, attempt ${attempt + 1}/${maxRetries}); ${retryAfterSeconds}s sonra yeniden denenecek.`
+    );
+    await sleep(retryAfterSeconds * 1000 + RETRY_JITTER_MS);
+  }
+
+  // teorik olarak buraya düşmüyoruz ama TS'yi memnun etmek için:
+  throw new Error(`${label} failed after ${maxRetries} retries`);
+}
+
 async function requestReplicate<TOutput = unknown>(
   modelPath: string,
   input: Record<string, unknown>
 ): Promise<ReplicatePrediction<TOutput>> {
   const token = getReplicateToken();
-  const response = await fetch(`${REPLICATE_API_BASE}/models/${modelPath}/predictions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      "Accept": "application/json; charset=utf-8",
-      Authorization: `Token ${token}`
+  const response = await fetchReplicateWithThrottleRetry(
+    `${REPLICATE_API_BASE}/models/${modelPath}/predictions`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Accept": "application/json; charset=utf-8",
+        Authorization: `Token ${token}`
+      },
+      body: JSON.stringify({ input })
     },
-    body: JSON.stringify({ input })
-  });
+    { label: `Replicate create prediction (${modelPath})` }
+  );
 
   if (!response.ok) {
     const errorBody = await response.text();
@@ -51,12 +143,16 @@ async function requestReplicate<TOutput = unknown>(
 
   while (prediction.status === "starting" || prediction.status === "processing") {
     await sleep(2000);
-    const poll = await fetch(prediction.urls.get, {
-      headers: {
-        "Accept": "application/json; charset=utf-8",
-        Authorization: `Token ${token}`
-      }
-    });
+    const poll = await fetchReplicateWithThrottleRetry(
+      prediction.urls.get,
+      {
+        headers: {
+          "Accept": "application/json; charset=utf-8",
+          Authorization: `Token ${token}`
+        }
+      },
+      { label: `Replicate poll (${modelPath})` }
+    );
 
     if (!poll.ok) {
       const errorBody = await poll.text();
