@@ -235,12 +235,23 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
     form.setValue("title", `${titleAnchor} Boyama Sayfaları | ${pageCount}+ Ücretsiz PDF`, {
       shouldDirty: true
     });
-    form.setValue("description", "Bu alan anchor girdisine gore kayit sirasinda otomatik uretilir.", {
-      shouldDirty: true
-    });
+    form.setValue(
+      "description",
+      "Bu alan anchor girdisine göre kayıt sırasında otomatik üretilir.",
+      { shouldDirty: true }
+    );
+    form.setValue("seoContent", "", { shouldDirty: true });
+    form.clearErrors(["description", "seoContent"]);
   }, [anchor, form, isCreateMode, pageCount]);
 
   const errors = form.formState.errors;
+  const normalizedAnchor = anchor.trim();
+  // Anchor dolu olduğunda meta açıklaması ve SEO metni sunucuda Replicate
+  // tarafından yeniden üretiliyor. Bu yüzden kullanıcıya bu alanları
+  // doldurtmanın anlamı yok; ayrıca client-side min(20) validation'ının
+  // submit'i bloke etmesini istemiyoruz. Hem input'u disable ediyoruz
+  // hem de değeri geçerli bir placeholder'a sabitliyoruz.
+  const aiWillAutoFillCopy = isCreateMode && normalizedAnchor.length > 0;
 
   const handleSubmit = form.handleSubmit((values) => {
     const formData = new FormData();
@@ -432,21 +443,33 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
         </div>
         <div className="space-y-2 md:col-span-2">
           <Label htmlFor="description">Meta açıklaması</Label>
-          <Textarea
-            id="description"
-            rows={3}
-            maxLength={500}
-            {...form.register("description")}
-            disabled={isPending}
-            placeholder="Elsa boyama sayfaları: Çocuklar için eğlenceli, kolay ve indirilebilir çizimler; prenses hayranları hemen renklendirsin!"
-          />
-          <div className="flex items-center justify-between text-xs text-brand-dark/60">
-            <p>Arama sonuçlarında görünecek açıklamayı 500 karakteri aşmadan yazın.</p>
-            <span>{descriptionValue.length}/500</span>
-          </div>
-          {errors.description?.message ? (
-            <p className="text-xs text-red-500">{errors.description.message}</p>
-          ) : null}
+          {aiWillAutoFillCopy ? (
+            <div className="rounded-xl border border-dashed border-brand-dark/20 bg-brand-light/40 px-4 py-3 text-sm text-brand-dark/70">
+              Anchor doldurulduğu için meta açıklaması kayıt sırasında
+              <strong className="mx-1 text-brand-dark">
+                {normalizedAnchor}
+              </strong>
+              konusuyla AI tarafından otomatik üretilecek.
+            </div>
+          ) : (
+            <>
+              <Textarea
+                id="description"
+                rows={3}
+                maxLength={500}
+                {...form.register("description")}
+                disabled={isPending}
+                placeholder="Elsa boyama sayfaları: Çocuklar için eğlenceli, kolay ve indirilebilir çizimler; prenses hayranları hemen renklendirsin!"
+              />
+              <div className="flex items-center justify-between text-xs text-brand-dark/60">
+                <p>Arama sonuçlarında görünecek açıklamayı 500 karakteri aşmadan yazın.</p>
+                <span>{descriptionValue.length}/500</span>
+              </div>
+              {errors.description?.message ? (
+                <p className="text-xs text-red-500">{errors.description.message}</p>
+              ) : null}
+            </>
+          )}
         </div>
       </div>
 
@@ -594,25 +617,37 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
 
       <div className="space-y-2">
         <Label htmlFor="seoContent">SEO metni</Label>
-        <Controller
-          name="seoContent"
-          control={form.control}
-          render={({ field }) => (
-            <SimpleRichTextEditor
-              id="seoContent"
-              value={field.value ?? ""}
-              onChange={field.onChange}
-              onBlur={field.onBlur}
-              disabled={isPending}
+        {aiWillAutoFillCopy ? (
+          <div className="rounded-xl border border-dashed border-brand-dark/20 bg-brand-light/40 px-4 py-3 text-sm text-brand-dark/70">
+            Anchor doldurulduğu için SEO paragrafı kayıt sırasında
+            <strong className="mx-1 text-brand-dark">
+              {normalizedAnchor}
+            </strong>
+            konusuyla AI tarafından otomatik üretilecek.
+          </div>
+        ) : (
+          <>
+            <Controller
+              name="seoContent"
+              control={form.control}
+              render={({ field }) => (
+                <SimpleRichTextEditor
+                  id="seoContent"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  disabled={isPending}
+                />
+              )}
             />
-          )}
-        />
-        <p className="text-xs text-brand-dark/60">
-          Bu içerik ana koleksiyon sayfalarında “Boyama sayfalarını keşfet” bölümünün üstünde görüntülenir.
-        </p>
-        {errors.seoContent?.message ? (
-          <p className="text-xs text-red-500">{errors.seoContent.message}</p>
-        ) : null}
+            <p className="text-xs text-brand-dark/60">
+              Bu içerik ana koleksiyon sayfalarında “Boyama sayfalarını keşfet” bölümünün üstünde görüntülenir.
+            </p>
+            {errors.seoContent?.message ? (
+              <p className="text-xs text-red-500">{errors.seoContent.message}</p>
+            ) : null}
+          </>
+        )}
       </div>
 
       {!isCreateMode ? (
