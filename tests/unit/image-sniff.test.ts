@@ -18,9 +18,17 @@ describe("detectImageMimeTypeFromBuffer", () => {
     expect(detectImageMimeTypeFromBuffer(webp)).toBe("image/webp");
   });
 
-  it("detects svg buffers", () => {
+  it("rejects svg buffers (XSS risk)", () => {
     const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"></svg>', "utf8");
-    expect(detectImageMimeTypeFromBuffer(svg)).toBe("image/svg+xml");
+    expect(detectImageMimeTypeFromBuffer(svg)).toBeNull();
+  });
+
+  it("rejects xml-prefixed svg buffers (XSS risk)", () => {
+    const svg = Buffer.from(
+      '<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg"></svg>',
+      "utf8"
+    );
+    expect(detectImageMimeTypeFromBuffer(svg)).toBeNull();
   });
 
   it("returns null for unknown data", () => {

@@ -30,4 +30,22 @@ describe("pageMetadataSchema", () => {
 
     expect(result.success).toBe(true);
   });
+
+  it.each(["admin", "api", "ara", "kategori", "etiket", "sitemap"])(
+    "rejects reserved slug %s",
+    (reservedSlug) => {
+      const result = pageMetadataSchema.safeParse({
+        title: "Orman Dostları",
+        slug: reservedSlug,
+        categories: ["hayvanlar"],
+        tags: ["orman"],
+        description: "Orman dostlari temali boyama sayfasi koleksiyonu."
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.flatten().fieldErrors.slug).toBeTruthy();
+      }
+    }
+  );
 });

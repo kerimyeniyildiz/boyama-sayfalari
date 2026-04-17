@@ -193,7 +193,7 @@ export function AdminChildPagesManager({
           <Input
             id="child-images"
             type="file"
-            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+            accept="image/png,image/jpeg,image/webp"
             multiple
             ref={fileInputRef}
             disabled={isPending}

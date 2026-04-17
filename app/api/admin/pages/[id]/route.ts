@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
 
 import { prisma } from "@/lib/db";
+import { enforceAdminMutationLimit } from "@/lib/admin-rate-limit";
 import { sanitizeSeoContent } from "@/lib/html";
 import { pageMetadataSchema, statusSchema } from "@/lib/validation";
 import { slugify } from "@/lib/slug";
@@ -32,8 +33,7 @@ const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set([
   "image/png",
   "image/jpeg",
-  "image/webp",
-  "image/svg+xml"
+  "image/webp"
 ]);
 
 type ErrorResponse = {
@@ -162,6 +162,11 @@ export async function PUT(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const rateLimited = enforceAdminMutationLimit(request, "pages:update");
+  if (rateLimited) {
+    return rateLimited;
+  }
+
   const formData = await request.formData();
   const existingPage = await prisma.coloringPage.findUnique({
     where: { id: params.id },
@@ -189,7 +194,7 @@ export async function PUT(
       return jsonFieldError(
         400,
         "INVALID_IMAGE_TYPE",
-        "Görsel yalnızca PNG, JPEG, SVG veya WebP formatında olabilir."
+        "Görsel yalnızca PNG, JPEG veya WebP formatında olabilir."
       );
     }
 
@@ -447,9 +452,14 @@ function collectKeys(record: {
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: { id: string } }
 ) {
+  const rateLimited = enforceAdminMutationLimit(request, "pages:delete");
+  if (rateLimited) {
+    return rateLimited;
+  }
+
   const page = await prisma.coloringPage.findUnique({
     where: { id: params.id },
     include: {

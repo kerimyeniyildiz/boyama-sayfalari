@@ -17,22 +17,10 @@ function isWebp(buffer: Buffer) {
   );
 }
 
-function isLikelySvg(buffer: Buffer) {
-  const preview = buffer.subarray(0, 2048).toString("utf8").trimStart().toLowerCase();
-  if (preview.startsWith("<svg")) {
-    return true;
-  }
-  if (preview.startsWith("<?xml")) {
-    return preview.includes("<svg");
-  }
-  return false;
-}
-
 export function detectImageMimeTypeFromBuffer(buffer: Buffer):
   | "image/png"
   | "image/jpeg"
   | "image/webp"
-  | "image/svg+xml"
   | null {
   if (startsWithBytes(buffer, PNG_SIGNATURE)) {
     return "image/png";
@@ -44,10 +32,6 @@ export function detectImageMimeTypeFromBuffer(buffer: Buffer):
 
   if (isWebp(buffer)) {
     return "image/webp";
-  }
-
-  if (isLikelySvg(buffer)) {
-    return "image/svg+xml";
   }
 
   return null;

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
 
 import { prisma } from "@/lib/db";
+import { enforceAdminMutationLimit } from "@/lib/admin-rate-limit";
 import { slugify } from "@/lib/slug";
 import {
   generateImageAssets,
@@ -33,8 +34,7 @@ const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set([
   "image/png",
   "image/jpeg",
-  "image/webp",
-  "image/svg+xml"
+  "image/webp"
 ]);
 
 type ErrorResponse = {
@@ -167,6 +167,11 @@ export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const rateLimited = enforceAdminMutationLimit(request, "pages:children:create");
+  if (rateLimited) {
+    return rateLimited;
+  }
+
   const parent = await prisma.coloringPage.findUnique({
     where: { id: params.id },
     include: {
@@ -227,7 +232,7 @@ export async function POST(
       return jsonError(
         400,
         "INVALID_IMAGE_TYPE",
-        "Görseller yalnızca PNG, JPEG, SVG veya WebP formatında olabilir."
+        "Görseller yalnızca PNG, JPEG veya WebP formatında olabilir."
       );
     }
 

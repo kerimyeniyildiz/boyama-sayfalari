@@ -51,7 +51,7 @@ export function createSession(email: string) {
     name: SESSION_COOKIE_NAME,
     value: token,
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "strict",
     secure: isProduction,
     path: "/",
     maxAge: SESSION_MAX_AGE

@@ -3,6 +3,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { ZodError } from "zod";
 
 import { prisma } from "@/lib/db";
+import { enforceAdminMutationLimit } from "@/lib/admin-rate-limit";
 import { sanitizeSeoContent } from "@/lib/html";
 import { pageMetadataSchema } from "@/lib/validation";
 import { slugify } from "@/lib/slug";
@@ -44,8 +45,7 @@ const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set([
   "image/png",
   "image/jpeg",
-  "image/webp",
-  "image/svg+xml"
+  "image/webp"
 ]);
 
 type ImageSource = {
@@ -503,6 +503,11 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const rateLimited = enforceAdminMutationLimit(request, "pages:create");
+  if (rateLimited) {
+    return rateLimited;
+  }
+
   const formData = await request.formData();
 
   const rawImageFile = (formData.get("image") ?? formData.get("cover")) as
@@ -584,9 +589,9 @@ export async function POST(request: Request) {
       return jsonError(
         400,
         "INVALID_IMAGE_TYPE",
-        "Görsel yalnızca PNG, JPEG, SVG veya WebP formatında olabilir.",
+        "Görsel yalnızca PNG, JPEG veya WebP formatında olabilir.",
         {
-          image: ["Görsel yalnızca PNG, JPEG, SVG veya WebP formatında olabilir."]
+          image: ["Görsel yalnızca PNG, JPEG veya WebP formatında olabilir."]
         }
       );
     }

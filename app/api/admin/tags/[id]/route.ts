@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
 
 import { prisma } from "@/lib/db";
+import { enforceAdminMutationLimit } from "@/lib/admin-rate-limit";
 import { CACHE_TAGS, tagForTag } from "@/lib/cache-tags";
 
 type ErrorResponse = {
@@ -23,9 +24,14 @@ function jsonError(status: number, code: string, message: string) {
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: { id: string } }
 ) {
+  const rateLimited = enforceAdminMutationLimit(request, "tags:delete");
+  if (rateLimited) {
+    return rateLimited;
+  }
+
   const tag = await prisma.tag.findUnique({
     where: { id: params.id },
     include: {

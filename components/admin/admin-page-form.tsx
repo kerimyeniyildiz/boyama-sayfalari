@@ -478,7 +478,7 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
             id="image"
             type="file"
             multiple
-            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+            accept="image/png,image/jpeg,image/webp"
             disabled={isPending}
             onChange={(event) => {
               const files = event.target.files;

@@ -2,9 +2,47 @@ import { z } from "zod";
 
 export const statusSchema = z.enum(["DRAFT", "PUBLISHED"]);
 
+// Site içi route çakışmalarını ve güvenlik sorunlarını önlemek için
+// ayrılmış slug'lar. Bu kelimeler sayfa/kategori/etiket slug'ı olarak kullanılamaz.
+export const RESERVED_SLUGS: readonly string[] = [
+  "admin",
+  "api",
+  "ara",
+  "kategori",
+  "etiket",
+  "sayfa",
+  "sitemap",
+  "sitemaps",
+  "robots",
+  "og",
+  "iletisim",
+  "gizlilik-politikasi",
+  "kullanim-sartlari",
+  "login",
+  "logout",
+  "new",
+  "edit",
+  "_next",
+  "static",
+  "public"
+];
+
+const reservedSlugSet = new Set(RESERVED_SLUGS);
+
+export function isReservedSlug(slug: string): boolean {
+  return reservedSlugSet.has(slug.trim().toLowerCase());
+}
+
+const slugSchema = z
+  .string()
+  .min(3)
+  .refine((value) => !isReservedSlug(value), {
+    message: "Bu slug sistem tarafından kullanılıyor, lütfen farklı bir slug seçin."
+  });
+
 export const pageMetadataSchema = z.object({
   title: z.string().min(3),
-  slug: z.string().min(3),
+  slug: slugSchema,
   categories: z.array(z.string().min(1)).default([]),
   tags: z.array(z.string().min(1)).default([]),
   description: z
@@ -50,6 +88,15 @@ export const adminPageListQuerySchema = z.object({
 
 export type AdminPageListQuery = z.infer<typeof adminPageListQuerySchema>;
 
+const taxonomySlugSchema = z
+  .string()
+  .min(2)
+  .max(100)
+  .refine((value) => !isReservedSlug(value), {
+    message: "Bu slug sistem tarafından kullanılıyor, lütfen farklı bir slug seçin."
+  })
+  .optional();
+
 export const createCategorySchema = z.object({
   name: z.string().min(2).max(80),
   slug: z.preprocess(
@@ -60,7 +107,7 @@ export const createCategorySchema = z.object({
       const trimmed = value.trim();
       return trimmed.length === 0 ? undefined : trimmed;
     },
-    z.string().min(2).max(100).optional()
+    taxonomySlugSchema
   )
 });
 
@@ -74,6 +121,6 @@ export const createTagSchema = z.object({
       const trimmed = value.trim();
       return trimmed.length === 0 ? undefined : trimmed;
     },
-    z.string().min(2).max(100).optional()
+    taxonomySlugSchema
   )
 });

@@ -4,7 +4,8 @@ import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
 
 import { prisma } from "@/lib/db";
-import { createTagSchema } from "@/lib/validation";
+import { enforceAdminMutationLimit } from "@/lib/admin-rate-limit";
+import { createTagSchema, isReservedSlug } from "@/lib/validation";
 import { slugify } from "@/lib/slug";
 import { getAdminTags } from "@/lib/data/admin/tags";
 import { CACHE_TAGS, tagForTag } from "@/lib/cache-tags";
@@ -55,6 +56,11 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const rateLimited = enforceAdminMutationLimit(request, "tags:create");
+  if (rateLimited) {
+    return rateLimited;
+  }
+
   let body: unknown;
 
   try {
@@ -67,6 +73,15 @@ export async function POST(request: Request) {
     const parsed = createTagSchema.parse(body);
     const name = parsed.name.trim();
     const computedSlug = slugify(parsed.slug ?? parsed.name);
+
+    if (isReservedSlug(computedSlug)) {
+      return jsonError(
+        400,
+        "RESERVED_SLUG",
+        "Bu slug sistem tarafından kullanılıyor, lütfen farklı bir isim/slug seçin.",
+        { slug: ["Bu slug sistem tarafından kullanılıyor."] }
+      );
+    }
 
     const tag = await prisma.tag.create({
       data: {
