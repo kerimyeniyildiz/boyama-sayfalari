@@ -16,12 +16,6 @@ export async function GET(): Promise<Response> {
       priority: 1
     },
     {
-      url: `${baseUrl}/ara`,
-      lastModified,
-      changeFrequency: "weekly",
-      priority: 0.8
-    },
-    {
       url: `${baseUrl}/gizlilik-politikasi`,
       lastModified,
       changeFrequency: "yearly",

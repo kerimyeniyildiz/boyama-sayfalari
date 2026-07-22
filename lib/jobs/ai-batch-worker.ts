@@ -1,6 +1,7 @@
 import "server-only";
 
 import { revalidatePath, revalidateTag } from "next/cache";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { GenerationJobStatus } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
 
@@ -701,12 +702,16 @@ export async function runAiBatchJob(jobId: string): Promise<RunOutcome> {
     metadata.categories.forEach((slug) => revalidatePath(`/kategori/${slug}`));
     metadata.tags.forEach((slug) => revalidatePath(`/etiket/${slug}`));
 
-    revalidateTag(CACHE_TAGS.coloringPages);
-    revalidateTag(CACHE_TAGS.categories);
-    revalidateTag(CACHE_TAGS.tags);
-    createdSlugs.forEach((slug) => revalidateTag(tagForColoringPage(slug)));
-    metadata.categories.forEach((slug) => revalidateTag(tagForCategory(slug)));
-    metadata.tags.forEach((slug) => revalidateTag(tagForTag(slug)));
+    revalidateTag(CACHE_TAGS.coloringPages, "max");
+    revalidateTag(CACHE_TAGS.categories, "max");
+    revalidateTag(CACHE_TAGS.tags, "max");
+    createdSlugs.forEach((slug) =>
+      revalidateTag(tagForColoringPage(slug), "max")
+    );
+    metadata.categories.forEach((slug) =>
+      revalidateTag(tagForCategory(slug), "max")
+    );
+    metadata.tags.forEach((slug) => revalidateTag(tagForTag(slug), "max"));
 
     const result: AiBatchJobResult = { createdSlugs, parentSlug };
 
@@ -750,9 +755,20 @@ export async function runAiBatchJob(jobId: string): Promise<RunOutcome> {
  * `/api/internal/process-jobs`).
  */
 export function startAiBatchJobInBackground(jobId: string) {
-  setImmediate(() => {
+  const run = () =>
     runAiBatchJob(jobId).catch((error) => {
       console.error(`AI batch job ${jobId} yürütülemedi`, error);
     });
+
+  try {
+    const { ctx } = getCloudflareContext();
+    ctx.waitUntil(run());
+    return;
+  } catch {
+    // Node/Dokploy geliştirme ortamında Cloudflare request context bulunmaz.
+  }
+
+  setImmediate(() => {
+    void run();
   });
 }

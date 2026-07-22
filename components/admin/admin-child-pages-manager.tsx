@@ -73,7 +73,7 @@ export function AdminChildPagesManager({
           body: formData
         });
 
-        const data = await response.json().catch(() => ({}));
+        const data = (await response.json().catch(() => ({}))) as { error?: { message?: string; fieldErrors?: Record<string, string[]> } };
 
         if (!response.ok) {
           const message =

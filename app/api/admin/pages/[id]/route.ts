@@ -160,13 +160,13 @@ async function isSlugTaken(slug: string, excludeId?: string) {
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
-  const rateLimited = enforceAdminMutationLimit(request, "pages:update");
+  const params = await props.params;
+  const rateLimited = await enforceAdminMutationLimit(request, "pages:update");
   if (rateLimited) {
     return rateLimited;
   }
-
   const formData = await request.formData();
   const existingPage = await prisma.coloringPage.findUnique({
     where: { id: params.id },
@@ -403,21 +403,21 @@ export async function PUT(
       revalidatePath(`/admin/pages/${updatedPage.parent.id}/edit`);
     }
 
-    revalidateTag(CACHE_TAGS.coloringPages);
-    revalidateTag(CACHE_TAGS.categories);
-    revalidateTag(CACHE_TAGS.tags);
-    revalidateTag(tagForColoringPage(updatedPage.slug));
+    revalidateTag(CACHE_TAGS.coloringPages, "max");
+    revalidateTag(CACHE_TAGS.categories, "max");
+    revalidateTag(CACHE_TAGS.tags, "max");
+    revalidateTag(tagForColoringPage(updatedPage.slug), "max");
     if (slugChanged) {
-      revalidateTag(tagForColoringPage(existingPage.slug));
+      revalidateTag(tagForColoringPage(existingPage.slug), "max");
     }
     if (updatedPage.parent?.slug) {
-      revalidateTag(tagForColoringPage(updatedPage.parent.slug));
+      revalidateTag(tagForColoringPage(updatedPage.parent.slug), "max");
     }
     categorySlugs.forEach((slug) => {
-      revalidateTag(tagForCategory(slug));
+      revalidateTag(tagForCategory(slug), "max");
     });
     tagSlugs.forEach((slug) => {
-      revalidateTag(tagForTag(slug));
+      revalidateTag(tagForTag(slug), "max");
     });
 
     return NextResponse.json({ success: true, page: updatedPage });
@@ -453,13 +453,13 @@ function collectKeys(record: {
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
-  const rateLimited = enforceAdminMutationLimit(request, "pages:delete");
+  const params = await props.params;
+  const rateLimited = await enforceAdminMutationLimit(request, "pages:delete");
   if (rateLimited) {
     return rateLimited;
   }
-
   const page = await prisma.coloringPage.findUnique({
     where: { id: params.id },
     include: {
@@ -547,17 +547,17 @@ export async function DELETE(
     revalidatePath(`/etiket/${slug}`);
   }
 
-  revalidateTag(CACHE_TAGS.coloringPages);
-  revalidateTag(CACHE_TAGS.categories);
-  revalidateTag(CACHE_TAGS.tags);
+  revalidateTag(CACHE_TAGS.coloringPages, "max");
+  revalidateTag(CACHE_TAGS.categories, "max");
+  revalidateTag(CACHE_TAGS.tags, "max");
   pageSlugsToRevalidate.forEach((slug) => {
-    revalidateTag(tagForColoringPage(slug));
+    revalidateTag(tagForColoringPage(slug), "max");
   });
   for (const slug of categorySlugs) {
-    revalidateTag(tagForCategory(slug));
+    revalidateTag(tagForCategory(slug), "max");
   }
   for (const slug of tagSlugs) {
-    revalidateTag(tagForTag(slug));
+    revalidateTag(tagForTag(slug), "max");
   }
 
   return NextResponse.json({ success: true });

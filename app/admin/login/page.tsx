@@ -4,9 +4,9 @@ import { AdminLoginForm } from "@/components/admin/admin-login-form";
 export const dynamic = "force-dynamic";
 
 type PageProps = {
-  searchParams: {
+  searchParams: Promise<{
     redirectTo?: string;
-  };
+  }>;
 };
 
 export async function generateMetadata() {
@@ -17,6 +17,7 @@ export async function generateMetadata() {
   });
 }
 
-export default function AdminLoginPage({ searchParams }: PageProps) {
+export default async function AdminLoginPage(props: PageProps) {
+  const searchParams = await props.searchParams;
   return <AdminLoginForm redirectTo={searchParams.redirectTo} />;
 }

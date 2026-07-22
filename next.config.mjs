@@ -1,4 +1,7 @@
 import { URL } from "node:url";
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
+
+initOpenNextCloudflareForDev();
 
 const remotePatterns = [];
 
@@ -22,56 +25,34 @@ if (process.env.R2_PUBLIC_URL) {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  experimental: {
-    typedRoutes: true
-  },
+  typedRoutes: true,
+  serverExternalPackages: ["@prisma/client", ".prisma/client"],
   images: {
     remotePatterns
   },
-  eslint: {
-    dirs: ["app", "components", "lib", "scripts", "tests"]
-  },
   headers: async () => {
-    const isProd = process.env.NODE_ENV === "production";
-
-    const baseSecurityHeaders = [
+    const securityHeaders = [
       { key: "X-Content-Type-Options", value: "nosniff" },
       { key: "X-Frame-Options", value: "SAMEORIGIN" },
       { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
       {
         key: "Permissions-Policy",
-        value: "camera=(), microphone=(), geolocation=(), browsing-topics=(), interest-cohort=()"
+        value:
+          "camera=(), microphone=(), geolocation=(), browsing-topics=(), interest-cohort=()"
       }
     ];
 
-    if (isProd) {
-      baseSecurityHeaders.push({
+    if (process.env.NODE_ENV === "production") {
+      securityHeaders.push({
         key: "Strict-Transport-Security",
         value: "max-age=63072000; includeSubDomains; preload"
       });
     }
 
-    // Anasayfa force-dynamic olduğu için Next.js varsayılan olarak
-    // Cache-Control header koymuyor; Cloudflare HTML'i cache'lemiyor.
-    // 1 saatlik edge cache + 1 günlük stale-while-revalidate ile hem CF
-    // hem tarayıcı cache'ini devreye alıyoruz. Admin mutation'larında
-    // CF API ile ayrıca purge yapılabilir (TODO: follow-up).
-    const homepageCacheControl =
-      "public, s-maxage=3600, stale-while-revalidate=86400";
-
     return [
       {
         source: "/:path*",
-        headers: baseSecurityHeaders
-      },
-      {
-        source: "/",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: homepageCacheControl
-          }
-        ]
+        headers: securityHeaders
       },
       {
         source: "/(.*)\\.webp",

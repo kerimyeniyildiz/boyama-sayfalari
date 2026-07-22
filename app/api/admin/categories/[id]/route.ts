@@ -25,13 +25,13 @@ function jsonError(status: number, code: string, message: string) {
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
-  const rateLimited = enforceAdminMutationLimit(request, "categories:delete");
+  const params = await props.params;
+  const rateLimited = await enforceAdminMutationLimit(request, "categories:delete");
   if (rateLimited) {
     return rateLimited;
   }
-
   const category = await prisma.category.findUnique({
     where: { id: params.id },
     include: {
@@ -71,9 +71,9 @@ export async function DELETE(
   revalidatePath("/admin/categories");
   revalidatePath(`/kategori/${category.slug}`);
 
-  revalidateTag(CACHE_TAGS.categories);
-  revalidateTag(CACHE_TAGS.coloringPages);
-  revalidateTag(tagForCategory(category.slug));
+  revalidateTag(CACHE_TAGS.categories, "max");
+  revalidateTag(CACHE_TAGS.coloringPages, "max");
+  revalidateTag(tagForCategory(category.slug), "max");
 
   return NextResponse.json({ success: true });
 }

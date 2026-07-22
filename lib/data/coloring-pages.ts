@@ -11,6 +11,7 @@ import {
 import { prisma } from "@/lib/db";
 
 const ONE_WEEK_SECONDS = 60 * 60 * 24 * 7;
+const CACHE_VERSION = "d1-v1";
 
 export type ColoringPageSummary = Prisma.ColoringPageGetPayload<{
   include: {
@@ -94,7 +95,7 @@ function cacheResult<T>(
   fn: () => Promise<T>,
   tags: string[] = []
 ) {
-  return unstable_cache(fn, keyParts, {
+  return unstable_cache(fn, [CACHE_VERSION, ...keyParts], {
     revalidate: ONE_WEEK_SECONDS,
     tags
   })();
@@ -482,12 +483,14 @@ export async function getCategoryWithPagesPaginated(
         prisma.coloringPage.count({
           where: {
             status: PageStatus.PUBLISHED,
+            parentId: null,
             categories: { some: { categoryId: category.id } }
           }
         }),
         prisma.coloringPage.findMany({
           where: {
             status: PageStatus.PUBLISHED,
+            parentId: null,
             categories: { some: { categoryId: category.id } }
           },
           orderBy: { createdAt: "desc" },

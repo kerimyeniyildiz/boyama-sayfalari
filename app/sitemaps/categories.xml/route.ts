@@ -14,21 +14,39 @@ export async function GET(): Promise<Response> {
         pages: {
           some: {
             page: {
-              status: "PUBLISHED"
+              status: "PUBLISHED",
+              parentId: null
             }
           }
         }
       },
-      select: { slug: true, updatedAt: true },
+      select: {
+        slug: true,
+        updatedAt: true,
+        _count: {
+          select: {
+            pages: {
+              where: {
+                page: {
+                  status: "PUBLISHED",
+                  parentId: null
+                }
+              }
+            }
+          }
+        }
+      },
       orderBy: { updatedAt: "desc" }
     });
 
-    const entries: SitemapEntry[] = categories.map((category) => ({
+    const entries: SitemapEntry[] = categories
+      .filter((category) => category._count.pages >= 2)
+      .map((category) => ({
       url: `${baseUrl}/kategori/${category.slug}`,
       lastModified: category.updatedAt,
       changeFrequency: "weekly",
       priority: 0.7
-    }));
+      }));
 
     return buildSitemapResponse(entries);
   } catch (error) {

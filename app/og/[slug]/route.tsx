@@ -8,13 +8,13 @@ export const runtime = "edge";
 export const revalidate = 3600;
 
 type RouteContext = {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 };
 
 export async function GET(_: Request, context: RouteContext) {
-  const page = await getColoringPageBySlug(context.params.slug);
+  const page = await getColoringPageBySlug((await context.params).slug);
 
   if (!page) {
     return NextResponse.next();

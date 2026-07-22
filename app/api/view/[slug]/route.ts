@@ -4,10 +4,8 @@ import { getViewablePage, incrementViews } from "@/lib/data/coloring-pages";
 
 export const runtime = "nodejs";
 
-export async function POST(
-  _request: Request,
-  { params }: { params: { slug: string } }
-) {
+export async function POST(_request: Request, props: { params: Promise<{ slug: string }> }) {
+  const params = await props.params;
   const slug = params.slug?.trim();
 
   if (!slug) {

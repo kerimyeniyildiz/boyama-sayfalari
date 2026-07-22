@@ -14,20 +14,16 @@ import { CategorySection } from "@/components/sections/category-section";
 import { LatestSection } from "@/components/sections/latest-section";
 import { TagCloud } from "@/components/sections/tag-cloud";
 
-// Anasayfa build-time prerender'a girmez; Dokploy Nixpacks build
-// container'ı DB'ye ulaşamadığı için prerender edilirse boş veriyle
-// cache'lenip saatlerce yanlış sürüm servis edilebiliyor. Runtime'da
-// ilk istekte taze veri ile SSR edilir; `lib/data/coloring-pages`
-// katmanındaki `unstable_cache` zaten 7 gün veri cache tutuyor,
-// dolayısıyla SSR maliyeti düşük. Cloudflare önünde
-// `next.config.mjs` başlıkları ile edge cache devreye giriyor.
+// D1 bindings are request-scoped; the homepage is rendered on demand and its
+// expensive data reads remain cached through the data cache/OpenNext R2 cache.
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function generateMetadata() {
   return buildMetadata({
-    title: "Boyama Sayfaları | 10000+ Ücretsiz PDF İndir ve Yazdır",
+    title: "Ücretsiz Boyama Sayfaları | PDF İndir ve Yazdır",
     description:
-      "Çocuklar için ücretsiz boyama sayfalarını indirin. Hayvanlar, araçlar, prensesler ve daha birçok kategoride yazdırılabilir boyama sayfaları.",
+      "Çocuklar için ücretsiz boyama sayfalarını PDF olarak indirin ve A4 kâğıda yazdırın. Hayvan, karakter ve özel gün koleksiyonlarını keşfedin.",
     path: "/"
   });
 }

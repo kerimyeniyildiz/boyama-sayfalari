@@ -25,13 +25,13 @@ function jsonError(status: number, code: string, message: string) {
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
-  const rateLimited = enforceAdminMutationLimit(request, "tags:delete");
+  const params = await props.params;
+  const rateLimited = await enforceAdminMutationLimit(request, "tags:delete");
   if (rateLimited) {
     return rateLimited;
   }
-
   const tag = await prisma.tag.findUnique({
     where: { id: params.id },
     include: {
@@ -71,9 +71,9 @@ export async function DELETE(
   revalidatePath("/admin/tags");
   revalidatePath(`/etiket/${tag.slug}`);
 
-  revalidateTag(CACHE_TAGS.tags);
-  revalidateTag(CACHE_TAGS.coloringPages);
-  revalidateTag(tagForTag(tag.slug));
+  revalidateTag(CACHE_TAGS.tags, "max");
+  revalidateTag(CACHE_TAGS.coloringPages, "max");
+  revalidateTag(tagForTag(tag.slug), "max");
 
   return NextResponse.json({ success: true });
 }

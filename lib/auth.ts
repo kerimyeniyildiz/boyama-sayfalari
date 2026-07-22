@@ -15,22 +15,25 @@ const SESSION_MAX_AGE = 60 * 60 * 8; // 8 saat
 
 export type AdminSession = SessionPayload;
 
-export function getSessionFromCookies(store = cookies()): AdminSession | null {
-  const value = store.get(SESSION_COOKIE_NAME)?.value;
+export async function getSessionFromCookies(
+  store?: Awaited<Awaited<ReturnType<typeof cookies>>>
+): Promise<AdminSession | null> {
+  const cookieStore = store ?? (await cookies());
+  const value = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   if (!value) {
     return null;
   }
 
   const session = parseSessionToken(value, env.SESSION_SECRET);
   if (!session) {
-    store.delete(SESSION_COOKIE_NAME);
+    cookieStore.delete(SESSION_COOKIE_NAME);
     return null;
   }
 
   const isExpired =
     Date.now() - session.issuedAt > SESSION_MAX_AGE * 1000;
   if (isExpired) {
-    store.delete(SESSION_COOKIE_NAME);
+    cookieStore.delete(SESSION_COOKIE_NAME);
     return null;
   }
 
@@ -42,10 +45,10 @@ export function getSessionFromRequest(request: NextRequest): AdminSession | null
   return token ? parseSessionToken(token, env.SESSION_SECRET) : null;
 }
 
-export function createSession(email: string) {
+export async function createSession(email: string) {
   const session: AdminSession = { email, issuedAt: Date.now() };
   const token = signSessionToken(session, env.SESSION_SECRET);
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
 
   cookieStore.set({
     name: SESSION_COOKIE_NAME,
@@ -60,12 +63,12 @@ export function createSession(email: string) {
   return session;
 }
 
-export function destroySession() {
-  cookies().delete(SESSION_COOKIE_NAME);
+export async function destroySession() {
+  (await cookies()).delete(SESSION_COOKIE_NAME);
 }
 
-export function assertAdminSession() {
-  const session = getSessionFromCookies();
+export async function assertAdminSession() {
+  const session = await getSessionFromCookies();
   if (!session) {
     throw new Error("Yetkisiz erişim");
   }

@@ -15,7 +15,8 @@ type PageProps = {
   searchParams: Record<string, string | string[] | undefined>;
 };
 
-export async function generateMetadata({ searchParams }: PageProps) {
+export async function generateMetadata(props: PageProps) {
+  const searchParams = await props.searchParams;
   const parsed = searchParamsSchema.safeParse({
     ...searchParams,
     q: Array.isArray(searchParams.q) ? searchParams.q[0] : searchParams.q,
@@ -34,11 +35,16 @@ export async function generateMetadata({ searchParams }: PageProps) {
     title: `${suffix} | ${siteConfig.name}`,
     description:
       "Boyama sayfalarını kategori ve etiket filtreleriyle hızlıca bul.",
-    path: "/ara"
+    path: "/ara",
+    robots: {
+      index: false,
+      follow: true
+    }
   });
 }
 
-export default async function SearchPage({ searchParams }: PageProps) {
+export default async function SearchPage(props: PageProps) {
+  const searchParams = await props.searchParams;
   const parsed = searchParamsSchema.safeParse({
     ...searchParams,
     q: Array.isArray(searchParams.q) ? searchParams.q[0] : searchParams.q,

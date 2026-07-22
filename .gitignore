@@ -1,5 +1,9 @@
 node_modules
 .next
+.open-next
+.wrangler
+.migration
+cloudflare-env.d.ts
 out
 coverage
 playwright-report

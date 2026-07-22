@@ -424,7 +424,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const rateLimited = enforceAdminMutationLimit(request, "pages:create");
+  const rateLimited = await enforceAdminMutationLimit(request, "pages:create");
   if (rateLimited) {
     return rateLimited;
   }
@@ -510,7 +510,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const session = getSessionFromCookies();
+    const session = await getSessionFromCookies();
     const job = await prisma.generationJob.create({
       data: {
         type: "AI_COLORING_PAGES_BATCH",
@@ -800,17 +800,17 @@ export async function POST(request: Request) {
       revalidatePath(`/etiket/${slug}`);
     });
 
-    revalidateTag(CACHE_TAGS.coloringPages);
-    revalidateTag(CACHE_TAGS.categories);
-    revalidateTag(CACHE_TAGS.tags);
+    revalidateTag(CACHE_TAGS.coloringPages, "max");
+    revalidateTag(CACHE_TAGS.categories, "max");
+    revalidateTag(CACHE_TAGS.tags, "max");
     createdPages.forEach((entry) => {
-      revalidateTag(tagForColoringPage(entry.slug));
+      revalidateTag(tagForColoringPage(entry.slug), "max");
     });
     metadata.categories.forEach((slug) => {
-      revalidateTag(tagForCategory(slug));
+      revalidateTag(tagForCategory(slug), "max");
     });
     metadata.tags.forEach((slug) => {
-      revalidateTag(tagForTag(slug));
+      revalidateTag(tagForTag(slug), "max");
     });
 
     return NextResponse.json({ success: true, slug: parentSlug });

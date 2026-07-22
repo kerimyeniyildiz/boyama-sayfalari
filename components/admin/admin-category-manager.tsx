@@ -43,7 +43,7 @@ export function AdminCategoryManager({
           })
         });
 
-        const data = await response.json().catch(() => ({}));
+        const data = (await response.json().catch(() => ({}))) as { error?: { message?: string; fieldErrors?: Record<string, string[]> } };
 
         if (!response.ok) {
           const message =
@@ -86,7 +86,7 @@ export function AdminCategoryManager({
           method: "DELETE"
         });
 
-        const data = await response.json().catch(() => ({}));
+        const data = (await response.json().catch(() => ({}))) as { error?: { message?: string; fieldErrors?: Record<string, string[]> } };
 
         if (!response.ok) {
           const message =

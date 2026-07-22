@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import type { Route } from "next";
 
 import { getColoringPageBySlug } from "@/lib/data/coloring-pages";
 import { buildColoringPageAlt } from "@/lib/image-alt";
@@ -46,12 +47,12 @@ function formatAgeRange(
 }
 
 type PageProps = {
-  params: {
+  params: Promise<{
     slug?: string[];
-  };
+  }>;
 };
 
-function resolveSlugParams(params: PageProps["params"]) {
+function resolveSlugParams(params: Awaited<PageProps["params"]>) {
   const segments = params.slug ?? [];
 
   if (!Array.isArray(segments) || segments.length === 0) {
@@ -63,7 +64,8 @@ function resolveSlugParams(params: PageProps["params"]) {
   return { primarySlug, extraSegments };
 }
 
-export async function generateMetadata({ params }: PageProps) {
+export async function generateMetadata(props: PageProps) {
+  const params = await props.params;
   const slugParams = resolveSlugParams(params);
 
   if (!slugParams) {
@@ -118,7 +120,8 @@ export async function generateMetadata({ params }: PageProps) {
   });
 }
 
-export default async function ColoringPageRoute({ params }: PageProps) {
+export default async function ColoringPageRoute(props: PageProps) {
+  const params = await props.params;
   const slugParams = resolveSlugParams(params);
 
   if (!slugParams) {
@@ -128,7 +131,7 @@ export default async function ColoringPageRoute({ params }: PageProps) {
   const { primarySlug, extraSegments } = slugParams;
 
   if (extraSegments.length > 0) {
-    redirect(`/${primarySlug}`);
+    redirect(`/${primarySlug}` as Route);
   }
 
   const page = await getColoringPageBySlug(primarySlug);
@@ -138,7 +141,7 @@ export default async function ColoringPageRoute({ params }: PageProps) {
   }
 
   if (page.parent?.slug) {
-    redirect(buildColoringPagePath(page));
+    redirect(buildColoringPagePath(page) as Route);
   }
 
   const pdfUrl = getPublicUrl(page.pdfKey);

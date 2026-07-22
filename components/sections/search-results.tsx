@@ -71,6 +71,14 @@ export function SearchResults({
 
   return (
     <section className="container space-y-10 py-12">
+      <div className="space-y-2">
+        <h1 className="text-3xl font-semibold text-brand-dark">
+          Boyama sayfası ara
+        </h1>
+        <p className="text-sm text-brand-dark/70">
+          Koleksiyonları anahtar kelime, kategori ve yaşa göre filtreleyin.
+        </p>
+      </div>
       <div className="rounded-3xl border border-brand-dark/10 bg-white/90 p-6 shadow-card">
         <form className="grid gap-6" action={searchRoute} method="get">
           <div className="grid gap-4 md:grid-cols-[1.5fr_1fr_1fr_1fr]">
@@ -209,4 +217,3 @@ export function SearchResults({
     </section>
   );
 }
-

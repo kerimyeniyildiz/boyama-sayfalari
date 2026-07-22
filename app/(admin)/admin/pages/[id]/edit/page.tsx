@@ -12,12 +12,13 @@ import { getPublicUrl } from "@/lib/r2";
 export const dynamic = "force-dynamic";
 
 type PageProps = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
-export default async function EditPage({ params }: PageProps) {
+export default async function EditPage(props: PageProps) {
+  const params = await props.params;
   const [page, categories, tags] = await Promise.all([
     getColoringPageById(params.id),
     getCategoriesWithCounts(),

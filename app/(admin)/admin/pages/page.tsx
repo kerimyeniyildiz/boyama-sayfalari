@@ -30,7 +30,8 @@ function normaliseSearchParams(
   return result;
 }
 
-export default async function AdminPagesPage({ searchParams }: PageProps) {
+export default async function AdminPagesPage(props: PageProps) {
+  const searchParams = await props.searchParams;
   const normalized = normaliseSearchParams(searchParams);
   let filters;
   let filterErrors: string[] = [];

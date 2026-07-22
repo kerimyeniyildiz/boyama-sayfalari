@@ -94,12 +94,16 @@ export async function POST(request: Request) {
   categorySlugs.forEach((slug) => revalidatePath(`/kategori/${slug}`));
   tagSlugs.forEach((slug) => revalidatePath(`/etiket/${slug}`));
 
-  revalidateTag(CACHE_TAGS.coloringPages);
-  revalidateTag(CACHE_TAGS.categories);
-  revalidateTag(CACHE_TAGS.tags);
-  duePages.forEach((page) => revalidateTag(tagForColoringPage(page.slug)));
-  categorySlugs.forEach((slug) => revalidateTag(tagForCategory(slug)));
-  tagSlugs.forEach((slug) => revalidateTag(tagForTag(slug)));
+  revalidateTag(CACHE_TAGS.coloringPages, "max");
+  revalidateTag(CACHE_TAGS.categories, "max");
+  revalidateTag(CACHE_TAGS.tags, "max");
+  duePages.forEach((page) =>
+    revalidateTag(tagForColoringPage(page.slug), "max")
+  );
+  categorySlugs.forEach((slug) =>
+    revalidateTag(tagForCategory(slug), "max")
+  );
+  tagSlugs.forEach((slug) => revalidateTag(tagForTag(slug), "max"));
 
   return NextResponse.json({ success: true, published: duePages.length });
 }

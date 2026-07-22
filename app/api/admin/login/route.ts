@@ -130,7 +130,7 @@ export async function POST(request: Request) {
     );
   }
 
-  createSession(admin.email);
+  await createSession(admin.email);
   return NextResponse.json(
     { success: true },
     { headers: { "Cache-Control": "no-store" } }

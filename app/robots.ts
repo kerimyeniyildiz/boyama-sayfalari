@@ -1,4 +1,4 @@
-import type { MetadataRoute } from "next";
+import type { MetadataRoute } from "next/dist/lib/metadata/types/metadata-interface";
 
 import { siteConfig } from "@/lib/seo";
 

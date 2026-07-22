@@ -9,14 +9,14 @@ describe("env", () => {
   });
 
   it("throws only when a required key is accessed and missing", () => {
-    const previous = process.env.DATABASE_URL;
-    delete process.env.DATABASE_URL;
+    const previous = process.env.SESSION_SECRET;
+    Reflect.deleteProperty(process.env, "SESSION_SECRET");
 
     try {
-      expect(() => env.DATABASE_URL).toThrow();
+      expect(() => env.SESSION_SECRET).toThrow();
     } finally {
       if (previous !== undefined) {
-        process.env.DATABASE_URL = previous;
+        process.env.SESSION_SECRET = previous;
       }
     }
   });

@@ -12,9 +12,9 @@ import { paginationParamsSchema } from "@/lib/validation";
 export const revalidate = 604800;
 
 type PageProps = {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
   searchParams: Record<string, string | string[] | undefined>;
 };
 
@@ -29,7 +29,9 @@ function parsePageParam(
   return parsed.success ? parsed.data.sayfa : 1;
 }
 
-export async function generateMetadata({ params, searchParams }: PageProps) {
+export async function generateMetadata(props: PageProps) {
+  const searchParams = await props.searchParams;
+  const params = await props.params;
   const page = parsePageParam(searchParams);
   const tagData = await getTagWithPagesPaginated(params.slug, page);
 
@@ -48,7 +50,9 @@ export async function generateMetadata({ params, searchParams }: PageProps) {
   });
 }
 
-export default async function TagPage({ params, searchParams }: PageProps) {
+export default async function TagPage(props: PageProps) {
+  const searchParams = await props.searchParams;
+  const params = await props.params;
   const page = parsePageParam(searchParams);
   const tagData = await getTagWithPagesPaginated(params.slug, page);
 

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata } from "next/dist/lib/metadata/types/metadata-interface";
 
 import { env } from "@/lib/env";
 
@@ -15,6 +15,7 @@ type BuildMetadataOptions = {
   type?: "website" | "article";
   publishedTime?: string;
   modifiedTime?: string;
+  robots?: Metadata["robots"];
 };
 
 export const siteConfig = {
@@ -32,7 +33,8 @@ export function buildMetadata({
   image,
   type = "website",
   publishedTime,
-  modifiedTime
+  modifiedTime,
+  robots
 }: BuildMetadataOptions): Metadata {
   const url = path ? new URL(path, siteConfig.url).toString() : siteConfig.url;
 
@@ -44,6 +46,7 @@ export function buildMetadata({
     alternates: {
       canonical: url
     },
+    robots,
     openGraph: {
       title,
       description,

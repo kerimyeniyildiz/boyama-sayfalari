@@ -165,13 +165,13 @@ async function uploadPageAssets(
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
-  const rateLimited = enforceAdminMutationLimit(request, "pages:children:create");
+  const params = await props.params;
+  const rateLimited = await enforceAdminMutationLimit(request, "pages:children:create");
   if (rateLimited) {
     return rateLimited;
   }
-
   const parent = await prisma.coloringPage.findUnique({
     where: { id: params.id },
     include: {
@@ -314,18 +314,18 @@ export async function POST(
   categorySlugs.forEach((slug) => revalidatePath(`/kategori/${slug}`));
   tagSlugs.forEach((slug) => revalidatePath(`/etiket/${slug}`));
 
-  revalidateTag(CACHE_TAGS.coloringPages);
-  revalidateTag(CACHE_TAGS.categories);
-  revalidateTag(CACHE_TAGS.tags);
-  revalidateTag(tagForColoringPage(parent.slug));
+  revalidateTag(CACHE_TAGS.coloringPages, "max");
+  revalidateTag(CACHE_TAGS.categories, "max");
+  revalidateTag(CACHE_TAGS.tags, "max");
+  revalidateTag(tagForColoringPage(parent.slug), "max");
   createdPages.forEach((entry) => {
-    revalidateTag(tagForColoringPage(entry.slug));
+    revalidateTag(tagForColoringPage(entry.slug), "max");
   });
   categorySlugs.forEach((slug) => {
-    revalidateTag(tagForCategory(slug));
+    revalidateTag(tagForCategory(slug), "max");
   });
   tagSlugs.forEach((slug) => {
-    revalidateTag(tagForTag(slug));
+    revalidateTag(tagForTag(slug), "max");
   });
 
   return NextResponse.json({ success: true, created: createdPages.length });

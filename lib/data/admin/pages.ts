@@ -53,8 +53,8 @@ export async function getAdminPages(
 
   if (filters.query) {
     where.OR = [
-      { title: { contains: filters.query, mode: "insensitive" } },
-      { slug: { contains: filters.query, mode: "insensitive" } }
+      { title: { contains: filters.query } },
+      { slug: { contains: filters.query } }
     ];
   }
 

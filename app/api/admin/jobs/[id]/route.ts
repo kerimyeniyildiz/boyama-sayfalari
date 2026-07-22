@@ -19,8 +19,9 @@ function jsonError(status: number, code: string, message: string) {
  */
 export async function GET(
   _request: Request,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   const job = await prisma.generationJob.findUnique({
     where: { id: params.id },
     select: {

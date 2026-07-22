@@ -38,7 +38,7 @@ export function HeroSection({ categories }: HeroSectionProps) {
             <Link href="/ara">Boyama Sayfası Ara</Link>
           </Button>
           <Button asChild variant="outline" size="lg">
-            <Link href="/kategori/hayvanlar">Popüler Kategoriler</Link>
+            <Link href="/kategori/hayvan">Popüler Kategoriler</Link>
           </Button>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">

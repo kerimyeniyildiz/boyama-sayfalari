@@ -103,15 +103,15 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
         const response = await fetch(`/api/admin/jobs/${jobId}`, {
           cache: "no-store"
         });
-        const json = await response.json().catch(() => null);
-        const data = json?.data as
-          | {
-              status: JobStatus;
-              progressCurrent: number;
-              progressTotal: number;
-              error?: string | null;
-            }
-          | undefined;
+        const json = (await response.json().catch(() => null)) as {
+          data?: {
+            status: JobStatus;
+            progressCurrent: number;
+            progressTotal: number;
+            error?: string | null;
+          };
+        } | null;
+        const data = json?.data;
 
         if (!data) {
           throw new Error("İş durumu okunamadı.");
@@ -297,7 +297,11 @@ export function AdminPageForm({ page, categories, tags }: AdminPageFormProps) {
           body: formData
         });
 
-        const data = await response.json().catch(() => ({}));
+        const data = (await response.json().catch(() => ({}))) as {
+          error?: { message?: string; fieldErrors?: Record<string, string[]> };
+          jobId?: string;
+          promptCount?: number;
+        };
 
         if (!response.ok) {
           const message =

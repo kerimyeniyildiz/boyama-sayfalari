@@ -1,6 +1,6 @@
-import type { MetadataRoute } from "next";
+import type { MetadataRoute } from "next/dist/lib/metadata/types/metadata-interface";
 
-export type SitemapEntry = MetadataRoute.Sitemap[number] & {
+export type SitemapEntry = Omit<MetadataRoute.Sitemap[number], "images"> & {
   images?: Array<{ url: string; title?: string }>;
 };
 

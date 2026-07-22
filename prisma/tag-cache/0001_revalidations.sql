@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS revalidations (
+  tag TEXT PRIMARY KEY NOT NULL,
+  revalidatedAt INTEGER NOT NULL
+);

@@ -12,9 +12,9 @@ import { paginationParamsSchema } from "@/lib/validation";
 export const revalidate = 604800;
 
 type PageProps = {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
   searchParams: Record<string, string | string[] | undefined>;
 };
 
@@ -29,7 +29,9 @@ function parsePageParam(
   return parsed.success ? parsed.data.sayfa : 1;
 }
 
-export async function generateMetadata({ params, searchParams }: PageProps) {
+export async function generateMetadata(props: PageProps) {
+  const searchParams = await props.searchParams;
+  const params = await props.params;
   const page = parsePageParam(searchParams);
   const categoryData = await getCategoryWithPagesPaginated(params.slug, page);
   if (!categoryData) {
@@ -43,11 +45,20 @@ export async function generateMetadata({ params, searchParams }: PageProps) {
   return buildMetadata({
     title: `${categoryData.category.name} boyama sayfaları`,
     description: `${categoryData.category.name} kategorisindeki boyama sayfalarını indir.`,
-    path: `/kategori/${categoryData.category.slug}`
+    path: `/kategori/${categoryData.category.slug}`,
+    robots:
+      categoryData.total < 2
+        ? {
+            index: false,
+            follow: true
+          }
+        : undefined
   });
 }
 
-export default async function CategoryPage({ params, searchParams }: PageProps) {
+export default async function CategoryPage(props: PageProps) {
+  const searchParams = await props.searchParams;
+  const params = await props.params;
   const page = parsePageParam(searchParams);
   const categoryData = await getCategoryWithPagesPaginated(params.slug, page);
 

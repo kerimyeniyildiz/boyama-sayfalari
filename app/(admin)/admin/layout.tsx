@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata } from "next/dist/lib/metadata/types/metadata-interface";
 
 import { AdminShell } from "@/components/layout/admin-shell";
 

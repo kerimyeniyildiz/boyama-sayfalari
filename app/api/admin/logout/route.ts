@@ -3,6 +3,6 @@ import { NextResponse } from "next/server";
 import { destroySession } from "@/lib/auth";
 
 export async function POST() {
-  destroySession();
+  await destroySession();
   return NextResponse.json({ success: true });
 }

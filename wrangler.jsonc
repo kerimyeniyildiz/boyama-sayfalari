@@ -1,0 +1,72 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "boyamasayfasi",
+  "main": "./custom-worker.ts",
+  "compatibility_date": "2026-07-22",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "vars": {
+    "NODE_ENV": "production",
+    "APP_URL": "https://boyamasayfasi.com.tr",
+    "NEXT_PUBLIC_SITE_NAME": "Boyama Sayfaları",
+    "NEXT_PUBLIC_SITE_URL": "https://boyamasayfasi.com.tr",
+    "NEXT_PUBLIC_DEFAULT_LOCALE": "tr-TR",
+    "R2_PUBLIC_URL": "https://cdn.boyamasayfasi.com.tr"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "boyamasayfasi-db",
+      "database_id": "2c885606-0c9b-469c-867a-4dd103ec8171",
+      "migrations_dir": "prisma/d1-migrations"
+    },
+    {
+      "binding": "NEXT_TAG_CACHE_D1",
+      "database_name": "boyamasayfasi-cache-tags",
+      "database_id": "84bcab40-45c7-44f2-886a-ec4c7886aed3"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MEDIA_BUCKET",
+      "bucket_name": "boyamasayfasi-upload"
+    },
+    {
+      "binding": "NEXT_INC_CACHE_R2_BUCKET",
+      "bucket_name": "boyamasayfasi-opennext-cache"
+    }
+  ],
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "boyamasayfasi"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "NEXT_CACHE_DO_QUEUE",
+        "class_name": "DOQueueHandler"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["DOQueueHandler"]
+    }
+  ],
+  "images": {
+    "binding": "IMAGES"
+  },
+  "triggers": {
+    "crons": ["*/15 * * * *"]
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  }
+}

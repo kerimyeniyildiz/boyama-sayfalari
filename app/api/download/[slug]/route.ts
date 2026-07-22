@@ -8,7 +8,7 @@ import {
 } from "@/lib/data/coloring-pages";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
-import { getSignedDownloadUrl } from "@/lib/r2";
+import { getR2Object } from "@/lib/r2";
 
 export const runtime = "nodejs";
 
@@ -26,9 +26,10 @@ function resolveClientIp(request: Request): string {
 
 export async function GET(
   request: Request,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
-  const page = await getDownloadablePage(params.slug);
+  const { slug } = await params;
+  const page = await getDownloadablePage(slug);
 
   if (!page) {
     return NextResponse.json(
@@ -44,12 +45,13 @@ export async function GET(
     .digest("hex");
   const userAgent = request.headers.get("user-agent") ?? undefined;
 
-  const contentDisposition = `attachment; filename="${page.slug}.pdf"`;
-  const signedUrl = await getSignedDownloadUrl(
-    page.pdfKey,
-    300,
-    contentDisposition
-  );
+  const object = await getR2Object(page.pdfKey);
+  if (!object?.body) {
+    return NextResponse.json(
+      { error: "PDF dosyası bulunamadı." },
+      { status: 404 }
+    );
+  }
 
   await Promise.all([
     incrementDownloads(page.id),
@@ -62,10 +64,12 @@ export async function GET(
     })
   ]);
 
-  return NextResponse.redirect(signedUrl, {
-    status: 302,
+  return new Response(object.body, {
     headers: {
-      "Cache-Control": "no-store"
+      "Content-Type": object.httpMetadata?.contentType ?? "application/pdf",
+      "Content-Disposition": `attachment; filename="${page.slug}.pdf"`,
+      "Cache-Control": "private, no-store",
+      ETag: object.httpEtag
     }
   });
 }

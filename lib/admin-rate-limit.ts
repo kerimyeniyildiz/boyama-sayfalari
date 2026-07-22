@@ -24,11 +24,11 @@ function resolveClientIp(request: Request): string {
  * sınırlamak için çağrılır. Oturumdaki admin e-posta + IP kombinasyonunu kullanır.
  * Sınır aşılırsa 429 yanıtı döner, geçilirse `null` döner.
  */
-export function enforceAdminMutationLimit(
+export async function enforceAdminMutationLimit(
   request: Request,
   scope: string
-): NextResponse | null {
-  const session = getSessionFromCookies();
+): Promise<NextResponse | null> {
+  const session = await getSessionFromCookies();
   const identity = session?.email ?? "anon";
   const ip = resolveClientIp(request);
 
