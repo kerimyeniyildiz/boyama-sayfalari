@@ -4,14 +4,16 @@
   "main": "./custom-worker.ts",
   "compatibility_date": "2026-07-22",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": true,
+  "preview_urls": true,
   "routes": [
     {
-      "pattern": "boyamasayfasi.com.tr",
-      "custom_domain": true
+      "pattern": "boyamasayfasi.com.tr/*",
+      "zone_name": "boyamasayfasi.com.tr"
     },
     {
-      "pattern": "www.boyamasayfasi.com.tr",
-      "custom_domain": true
+      "pattern": "www.boyamasayfasi.com.tr/*",
+      "zone_name": "boyamasayfasi.com.tr"
     }
   ],
   "assets": {
