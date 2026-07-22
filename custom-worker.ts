@@ -9,7 +9,14 @@ type RuntimeEnv = CloudflareEnv & {
 };
 
 export default {
-  fetch: handler.fetch,
+  async fetch(request: Request, env: RuntimeEnv, ctx: ExecutionContext) {
+    const url = new URL(request.url);
+    if (url.hostname === "www.boyamasayfasi.com.tr") {
+      url.hostname = "boyamasayfasi.com.tr";
+      return Response.redirect(url, 308);
+    }
+    return handler.fetch(request, env, ctx);
+  },
 
   async scheduled(
     _event: ScheduledController,
