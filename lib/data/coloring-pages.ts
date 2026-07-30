@@ -280,7 +280,22 @@ export async function getCategoriesWithCounts() {
     async () =>
       prisma.category.findMany({
         include: {
-          _count: { select: { pages: true } }
+          // Kategori sayfası yalnızca yayında olan ANA sayfaları listeliyor
+          // (bkz. getPagesByCategory). Sayaç da aynı ölçütü kullanmalı;
+          // aksi halde ana sayfada "80 sayfa" yazarken kategoriye girince
+          // 3 sayfa çıkıyor (alt sayfalar ve taslaklar da sayılıyordu).
+          _count: {
+            select: {
+              pages: {
+                where: {
+                  page: {
+                    status: PageStatus.PUBLISHED,
+                    parentId: null
+                  }
+                }
+              }
+            }
+          }
         },
         orderBy: { name: "asc" }
       }),
@@ -301,7 +316,19 @@ export async function getTagsWithCounts(limit = 50) {
     async () =>
       prisma.tag.findMany({
         include: {
-          _count: { select: { pages: true } }
+          // Kategorilerdeki ile aynı sayaç düzeltmesi.
+          _count: {
+            select: {
+              pages: {
+                where: {
+                  page: {
+                    status: PageStatus.PUBLISHED,
+                    parentId: null
+                  }
+                }
+              }
+            }
+          }
         },
         orderBy: { name: "asc" },
         take: limit
